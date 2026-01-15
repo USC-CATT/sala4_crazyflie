@@ -13,7 +13,7 @@ from nav_msgs.msg import Odometry
 from std_srvs.srv import Trigger
 from geometry_msgs.msg import Twist
 
-WAYPOINTS = np.array([[0.5, 0.0, 0.0], [0.0, 0.0, 3.0]])  # In Meters
+WAYPOINTS = np.array([[0.5, 0.0, 1.0], [0.0, 0.5, 1.5]])  # In Meters
 
 
 class WaypointFollowing(Node):
@@ -34,7 +34,7 @@ class WaypointFollowing(Node):
         )
         
         self.srv = self.create_service(
-            Trigger, robot_prefix + "/stop_waypoint_following", self.stop_wall_following_cb
+            Trigger, robot_prefix + "/stop_waypoint_following", self.stop_waypoint_following_cb
         )
         
         self.position = [0.0, 0.0, 0.0]
@@ -55,7 +55,7 @@ class WaypointFollowing(Node):
         self.twist_publisher.publish(msg)
 
     def timer_callback(self):
-        # wait for the delay to pass and then start wall following
+        # wait for the delay to pass and then start waypoint following
         if self.wait_for_start:
             if (
                 self.get_clock().now().nanoseconds * 1e-9 - self.start_clock
@@ -77,7 +77,7 @@ class WaypointFollowing(Node):
         msg.angular.z = yaw_rate
         self.twist_publisher.publish(msg)
         
-    def stop_wall_following_cb(self, request, response):
+    def stop_waypoint_following_cb(self, request, response):
         self.get_logger().info("Stopping waypoint following")
         self.timer.cancel()
         msg = Twist()
