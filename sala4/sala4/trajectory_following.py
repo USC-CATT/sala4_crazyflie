@@ -5,7 +5,9 @@
 from pathlib import Path
 
 from crazyflie_py import Crazyswarm
+from crazyflie_py.crazyflie import CrazyflieServer
 from crazyflie_py.uav_trajectory import Trajectory
+import rclpy
 import numpy as np
 
 
@@ -26,7 +28,7 @@ def executeTrajectory(timeHelper, cf, trajpath, rate=100, offset=np.zeros(3)):
             e.acc,
             e.yaw,
             e.omega)
-
+        
         timeHelper.sleepForRate(rate)
 
 
@@ -34,12 +36,16 @@ def main():
     swarm = Crazyswarm()
     timeHelper = swarm.timeHelper
     cf = swarm.allcfs.crazyflies[0]
+    print("Arming crazyflie")
+    cf.arm()
 
     rate = 30.0
     Z = 0.5
+    pos = np.array(cf.initialPosition) + np.array([0, 0, Z])
     
-
+    print("Attempting takeoff")
     cf.takeoff(targetHeight=Z, duration=Z+1.0)
+    cf.goTo(pos, 0, 1.0)
     timeHelper.sleep(Z+2.0)
 
     executeTrajectory(timeHelper, cf,
@@ -50,7 +56,3 @@ def main():
     cf.notifySetpointsStop()
     cf.land(targetHeight=0.03, duration=Z+1.0)
     timeHelper.sleep(Z+2.0)
-
-
-if __name__ == '__main__':
-    main()
