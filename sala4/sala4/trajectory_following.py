@@ -23,7 +23,8 @@ def executeTrajectory(timeHelper, cf, trajpath, rate=100, offset=np.zeros(3)):
 
         e = traj.eval(t)
         cf.cmdFullState(
-            e.pos + np.array(cf.initialPosition) + offset,
+            # e.pos + np.array(cf.initialPosition) + offset,
+            np.zeros(3),
             e.vel,
             e.acc,
             e.yaw,
@@ -54,5 +55,5 @@ def main():
                       offset=np.array([0, 0, 0.5]))
 
     cf.notifySetpointsStop()
-    cf.land(targetHeight=0.03, duration=Z+1.0)
+    cf.land(targetHeight=0.01, duration=Z+1.0)
     timeHelper.sleep(Z+2.0)

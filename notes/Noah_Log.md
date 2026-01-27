@@ -42,3 +42,7 @@ Questions to ask Dr. Culbertson:
 - We discovered that editing crazyflie_cpp in crazyswarm2 (which is two submodules deep) allows us to modify the controls of the drone while using the crazyswarm2 python library. it needs to be built before it works but adding a return to the sendFullState function disables the fullstate functionality of the drone.
 - this can be used to potentially convert the fullstate from a modeAbs to modeVel control to have velocity and acceleration be used instead of position
 - Waypoint follower now works
+
+# Jan 27
+- Figured out data pipeline of Crazyswarm2
+- Created a fork of Crazyswarm2 in case we need to modify its code for velocity setpoints, but may not be necessary
