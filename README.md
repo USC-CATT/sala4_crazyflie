@@ -19,15 +19,17 @@ To run:
 
 ## ROS2 - Launch
 
-To run the Crazyflie Crazyswarm2 server in either real life or simulation configuation, run the following command:
+To run the Crazyflie Crazyswarm2 server in real-life, run the following command, ensuring the `backend:=cflib` parameter is present:
 
-`ros2 launch crazyflie launch.py rviz:=true`
+`ros2 launch crazyflie launch.py rviz:=true backend:=cflib`
 
-To run the server in simulation mode, add `backend:=sim` to the end of the launch command, like so:
+To run the server in simulation mode, change the backend parameter to `backend:=sim` to the end of the launch command, like so:
 
 `ros2 launch crazyflie launch.py rviz:=true backend:=sim`
 
 Helpful to know is the `--show-args` flag, which can be added on to the launch command to see the other arguments available for that particular launch file.
+
+**More information about the Crazyswarm2 launch file and backend configuration can be found in [CRAZYSWARM2.MD](./CRAZYSWARM2.md)**
 
 This `launch.py` can be found at the [Crazyswarm2 repository](https://github.com/IMRCLab/crazyswarm2/blob/main/crazyflie/launch/launch.py).
 
