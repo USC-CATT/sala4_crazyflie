@@ -37,3 +37,8 @@ Questions to ask Dr. Culbertson:
 - https://forum.bitcraze.io/viewtopic.php?t=4197
 - could be useful: https://www.bitcraze.io/documentation/system/platform/cf2-expansiondecks/#compatibility-matrixes
 - https://github.com/bitcraze/crazyflie-firmware/issues/806
+
+# Jan. 22
+- We discovered that editing crazyflie_cpp in crazyswarm2 (which is two submodules deep) allows us to modify the controls of the drone while using the crazyswarm2 python library. it needs to be built before it works but adding a return to the sendFullState function disables the fullstate functionality of the drone.
+- this can be used to potentially convert the fullstate from a modeAbs to modeVel control to have velocity and acceleration be used instead of position
+- Waypoint follower now works
