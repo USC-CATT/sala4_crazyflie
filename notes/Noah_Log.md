@@ -46,3 +46,8 @@ Questions to ask Dr. Culbertson:
 # Jan 27
 - Figured out data pipeline of Crazyswarm2
 - Created a fork of Crazyswarm2 in case we need to modify its code for velocity setpoints, but may not be necessary
+
+# Feb 5
+- Discovered that cmdVel uses cmd_vel_legacy topic in crazyswarm
+- discovered that cmdVel doesnt work when using PID in crazyswarm, only when using mellinger
+- set up folder for python library usage

@@ -11,6 +11,11 @@ This Readme is structured in the steps necessary to get the Crazyflie up and run
 To build the packages contained within this repository, there is a helpful build script located at `scripts/build.sh`. You must rebuild the ROS workspace after creating or renaming any python file in either the `sala4_bringup` or `sala4` packages. To build, run:
 `source scripts/build.sh`, which automatically navigates to our root ROS workspace and back to this folder.
 
+## Conda
+If the computer has or is using another version of python other than python 3.10, you must use conda to switch to python 3.10
+
+In every terminal window where you are running crazyflie commands, run `conda activate py310` to use the correct python version.
+
 ## Prelaunch
 
 After building and before running any ros2 launch commands, you must first run the prelaunch script at `scripts/prelaunch_ros.sh`. This is a simple script which runs necessary ros2 bash files and adds the necessary gazebo resource path. **This must be run in every terminal before running any ros2 commands.**

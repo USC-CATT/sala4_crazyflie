@@ -11,10 +11,10 @@ from crazyflie_py.crazyflie import CrazyflieServer
 from crazyflie_py.uav_trajectory import Trajectory
 
 WAYPOINTS = [
-    [[0.3, 0.1, 0.0], 0.0, 3.0],
-    [[0.2, 0.3, 0.0], 1.0, 3.0],
-    [[-0.3, 0.0, 0.0], 2.0, 3.0],
-    [[0.0, 0.0, 0.0], 4.0, 3.0],
+    [[0.8, 0.3, 0.0], 0.0, 3.0],
+    [[0.4, 0.6, 0.0], 45.0, 3.0],
+    [[-0.5, 0.0, 0.0], 0.0, 3.0],
+    [[0.0, 0.0, 0.0], -45.0, 3.0],
 ]
 WAYPOINT_DELAY = 0.5
 TOTAL_WAYPOINTS = 4
@@ -63,8 +63,8 @@ def main():
     pos = np.array(cf.initialPosition) + np.array([0, 0, Z])
 
     print("Attempting takeoff")
-    cf.takeoff(targetHeight=Z, duration=Z + 1.0)
-    cf.goTo(pos, 0, 1.0)
+    # cf.takeoff(targetHeight=Z, duration=Z + 1.0)
+    # cf.goTo(pos, 0, 1.0)
     timeHelper.sleep(Z + 2.0)
 
     executeTrajectoryStreamed(

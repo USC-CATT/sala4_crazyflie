@@ -11,23 +11,17 @@ from crazyflie_py.crazyflie import CrazyflieServer
 from crazyflie_py.uav_trajectory import Trajectory
 
 
-def executeTrajectory(timeHelper, cf, trajpath, rate=100, offset=np.zeros(3)):
-    traj = Trajectory()
-    traj.loadcsv(trajpath)
-
+def cmdVelStreamed(timeHelper, cf, rate=100.0):
     start_time = timeHelper.time()
     while not timeHelper.isShutdown():
         t = timeHelper.time() - start_time
-        if t > traj.duration:
+        if t > 2:
             break
-
-        e = traj.eval(t)
-        cf.cmdFullState(
-            e.pos + np.array(cf.initialPosition) + offset, e.vel, e.acc, e.yaw, e.omega
-        )
-
+        # cf.cmdFullState(
+        #     pos=[0.0,0.0,0.2], vel=[0.0, 0.0, 0.0], acc=np.zeros(3), yaw=1.4, omega=[0.0,0.0, 5.0]
+        # )
+        cf.cmdVel(roll=0.0,pitch=0.0,yawRate=10.0,thrust=45000.0)
         timeHelper.sleepForRate(rate)
-    timeHelper.sleep(1)
 
 
 def main():
@@ -39,21 +33,20 @@ def main():
 
     rate = 30.0
     Z = 0.5
-    pos = np.array(cf.initialPosition) + np.array([0, 0, Z])
-
     print("Attempting takeoff")
-    cf.takeoff(targetHeight=Z, duration=Z + 1.0)
-    cf.goTo(pos, 0, 1.0)
-    timeHelper.sleep(Z + 2.0)
+    # cf.takeoff(targetHeight=0.5, duration=1.5)
+    # cf.goTo([0.0,0.0,0.2],0.0,1.0)
+    timeHelper.sleep(3.0)
 
-    executeTrajectory(
+    print("Streaming velocity")
+
+    cmdVelStreamed(
         timeHelper,
         cf,
-        Path(__file__).parent / "data/figure8.csv",
         rate,
-        offset=np.array([0, 0, 0.5]),
     )
+    print("Finished streaming velocity")
 
     cf.notifySetpointsStop()
-    cf.land(targetHeight=0.01, duration=Z + 1.0)
+    # cf.land(targetHeight=0.01, duration=Z + 1.0)
     timeHelper.sleep(Z + 2.0)
