@@ -51,3 +51,10 @@ Questions to ask Dr. Culbertson:
 - Discovered that cmdVel uses cmd_vel_legacy topic in crazyswarm
 - discovered that cmdVel doesnt work when using PID in crazyswarm, only when using mellinger
 - set up folder for python library usage
+
+# Feb 10
+- Continued testing using cflib python library, and found that all of the `commander` low-level commands work, including `send_zdistance_setpoint` which allows us to send roll/pitch/yawrate while keeping a distance from the floor
+- Found that while using this, PID was smoother but slightly slower to reach the setpoint, while mellinger was a lot snappier but has a lot of shake and oscillation when moving slowly
+  - we will need to tune mellinger's values
+- we tried modifying the crazyflies mass directly in the firmware, but discovered that there is a way to do it from CFClient, by going to `parameters > ctrlMel`, which allows for tuning mellinger gains and its mass.
+- added some documentation on building the firmware and flashing to the drone
