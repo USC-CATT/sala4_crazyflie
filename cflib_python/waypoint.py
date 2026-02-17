@@ -75,7 +75,7 @@ WAYPOINTS = [
     [[-0.5, 0.0, 0.0], 0.0, 2.0],
     [[0.0, 0.0, 0.0], -45.0, 2.0],
 ]
-WAYPOINT_DELAY = 1
+WAYPOINT_DELAY = 2
 TOTAL_WAYPOINTS = 4
 
 
@@ -90,12 +90,12 @@ if __name__ == "__main__":
         time.sleep(1.0)
 
         scf.cf.high_level_commander.takeoff(0.5, 1)
-        time.sleep(10.0)
-        # for i, waypoint in enumerate(WAYPOINTS):
-        #     print(f"Going to waypoint {i}")
-        #     scf.cf.high_level_commander.go_to(
-        #         waypoint[0][0], waypoint[0][1], waypoint[0][2] + 0.5, waypoint[1], waypoint[2]
-        #     )
-        #     time.sleep(waypoint[2] + WAYPOINT_DELAY)
-        # time.sleep(0.5)
+        time.sleep(1.0)
+        for i, waypoint in enumerate(WAYPOINTS):
+            print(f"Going to waypoint {i}")
+            scf.cf.high_level_commander.go_to(
+                waypoint[0][0], waypoint[0][1], waypoint[0][2] + 0.5, waypoint[1], waypoint[2]
+            )
+            time.sleep(waypoint[2] + WAYPOINT_DELAY)
+        time.sleep(0.5)
         scf.cf.high_level_commander.land(0.02, 1)

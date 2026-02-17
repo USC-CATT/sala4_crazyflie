@@ -58,3 +58,7 @@ Questions to ask Dr. Culbertson:
   - we will need to tune mellinger's values
 - we tried modifying the crazyflies mass directly in the firmware, but discovered that there is a way to do it from CFClient, by going to `parameters > ctrlMel`, which allows for tuning mellinger gains and its mass.
 - added some documentation on building the firmware and flashing to the drone
+\
+
+# Feb 17
+- Bingtao suggested setting motorPowerSet pwm values directly, but that has a delay since i have to send 4 different packets for each motor, so trying to figure out how to send crtp packets to get things lower latency
