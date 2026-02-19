@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
         scf.cf.param.set_value(complete_name="motorPowerSet.enable", value=1)
         # motor power in range of 6,000-60,000
-        
+        print("starting motors")
         scf.cf.param.set_value(complete_name="motorPowerSet.m1", value=9000)
         scf.cf.param.set_value(complete_name="motorPowerSet.m2", value=9000)
         scf.cf.param.set_value(complete_name="motorPowerSet.m3", value=9000)
