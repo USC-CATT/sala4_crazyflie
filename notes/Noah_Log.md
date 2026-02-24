@@ -62,3 +62,10 @@ Questions to ask Dr. Culbertson:
 
 # Feb 17
 - Bingtao suggested setting motorPowerSet pwm values directly, but that has a delay since i have to send 4 different packets for each motor, so trying to figure out how to send crtp packets to get things lower latency
+# feb 19
+began work on adding a crtp full motor port to the firmware, it doesnt work but the work has been done in `motor_command_raw.c` and `crtp_firmware.py`
+firmware was compiled successfully 
+
+# Feb 24
+Finished work on motor individual power CRTP port,its at crtp_motor_command_raw in the firmware
+created motorRaw class for handling this communication
