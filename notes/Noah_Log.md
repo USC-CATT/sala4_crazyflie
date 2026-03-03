@@ -67,5 +67,8 @@ began work on adding a crtp full motor port to the firmware, it doesnt work but 
 firmware was compiled successfully 
 
 # Feb 24
-Finished work on motor individual power CRTP port,its at crtp_motor_command_raw in the firmware
+Finished work on motor individual power CRTP port, its at crtp_motor_command_raw.c in the firmware
 created motorRaw class for handling this communication
+
+# Feb 26
+Began work on porting motor control/pid controller and the stabilizer to python

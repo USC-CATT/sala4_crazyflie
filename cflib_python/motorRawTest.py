@@ -68,7 +68,7 @@ if __name__ == "__main__":
     lg_stab.add_variable('gyro.z', 'FP16')
     lg_stab.add_variable('acc.x', 'FP16')
     lg_stab.add_variable('acc.y', 'FP16')
-    lg_stab.add_variable('acc.z', 'FP16')
+    lg_stab.add_variaable('acc.z', 'FP16')
 
     cf = Crazyflie(rw_cache="./cache")
     motorRaw = MotorRaw(crazyflie=cf)

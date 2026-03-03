@@ -49,10 +49,6 @@ class MotorRaw:
         return
 
     def send_motor_raw(self, m1, m2, m3, m4):
-        """
-        Send the current Crazyflie X, Y, Z position. This is going to be
-        forwarded to the Crazyflie's position estimator.
-        """
 
         pk = CRTPPacket()
         pk.port = MOTOR_RAW_PORT
