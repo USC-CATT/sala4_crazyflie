@@ -1,0 +1,16 @@
+{
+  "duration_s": 50.0,
+  "dt_s": 0.002,
+  "baseline": {
+    "max_err_all_m": 0.9999972967777563,
+    "max_err_post_wind_m": 0.21106090341798467,
+    "rms_err_post_wind_m": 0.12230094477807153,
+    "final_err_m": 0.0738195230005156
+  },
+  "augmented": {
+    "max_err_all_m": 0.9999972967777563,
+    "max_err_post_wind_m": 0.13233530164132998,
+    "rms_err_post_wind_m": 0.07241325386024038,
+    "final_err_m": 0.03410352655277958
+  }
+}

@@ -5,11 +5,12 @@ Based on platform_defaults.h from Crazyflie firmware
 Copyright (C) 2011-2012 Bitcraze AB
 """
 
+# Inner loop
 # Attitude Rate PID parameters
 PID_ROLL_RATE_KP = 200.0
 PID_ROLL_RATE_KI = 400.0
 PID_ROLL_RATE_KD = 2.5
-PID_ROLL_RATE_KFF = 0.0
+PID_ROLL_RATE_KFF = 0.0 # feedforward gain (not used in the firmware)
 PID_ROLL_RATE_INTEGRATION_LIMIT = 33.3
 
 PID_PITCH_RATE_KP = 200.0
@@ -43,6 +44,7 @@ PID_YAW_KD = 0.35
 PID_YAW_KFF = 0.0
 PID_YAW_INTEGRATION_LIMIT = 360.0
 
+# Outer loop
 # Velocity PID parameters
 PID_VEL_X_KP = 25.0
 PID_VEL_X_KI = 1.0
@@ -66,13 +68,13 @@ PID_VEL_Z_KD_BARO_Z_HOLD = 1.5
 PID_VEL_Z_KFF_BARO_Z_HOLD = 0.0
 
 # Position PID parameters
-PID_POS_X_KP = 2.0
-PID_POS_X_KI = 0.0
+PID_POS_X_KP = 2.0  
+PID_POS_X_KI = 1.0
 PID_POS_X_KD = 0.0
 PID_POS_X_KFF = 0.0
 
 PID_POS_Y_KP = 2.0
-PID_POS_Y_KI = 0.0
+PID_POS_Y_KI = 1.0
 PID_POS_Y_KD = 0.0
 PID_POS_Y_KFF = 0.0
 
