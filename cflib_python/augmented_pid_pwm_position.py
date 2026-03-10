@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
 """
-Host-side augmented cascaded controller with raw PWM motor output.
+Host-side augmented cascaded PID with raw PWM motor output.
 
-This script bypasses the firmware flight controller by:
-1) reading estimator + IMU logs from the Crazyflie
-2) running a host-side controller
-3) sending PWM values directly to all four motors
+Baseline control comes from the existing cascaded PID structure. The
+augmentation uses a velocity-only nominal model for each translational axis:
 
-Augmentation is based on the simulator implementation in:
-/home/gary/Downloads/Crazyflie-simulator-main/augmented_controller.py
+    vhat_dot = u
+
+with measured velocity error:
+
+    e_v = v - vhat
+
+Its filtered derivative is approximated using:
+
+    H(s) = s / (1 + mu s)
+
+and the least-squares correction v* is computed from:
+
+    min ||B v + e_f||
+
+For the scalar velocity model with B = 1, this reduces to v* = -e_f.
 """
 
 # User-editable trajectory block.
@@ -16,27 +27,32 @@ Augmentation is based on the simulator implementation in:
 # time_s is relative to the start of the main control phase.
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
-    (0.0, 0.0, 0.0, 0.04, 0.0),
-    (3.0, 0.0, 0.0, 0.5, 0.0),
-    (9.0, 0.3, 0.0, 0.5, 0.0),
-    # (9.0, 0.3, 0.3, 0.9, 20.0),
-    # (12.0, 0.0, 0.0, 0.8, 0.0),
+    (0.0, 0.0, 0.0, 0.5, 0.0),
+    (8.0, 0.0, 0.0, 0.5, 0.0),
 ]
 
-# Augmentation tuning (ported from simulator augmented_controller.py).
-AUG_ENABLED = True
-AUG_MU = 0.15
-AUG_V_LIMIT_XY = 0.2
-AUG_START_TIME = 6.0
-AUG_RAMP_TIME = 5.0
-AUG_V_SLEW_LIMIT_XY = 0.25
-AUG_MAX_ATT_DELTA_DEG = 1.0
-AUG_DISABLE_IF_TILT_OVER_DEG = 22.0
+# Augmentation tuning.
+# XY augmentation is enabled by default for wind rejection.
+# Z augmentation is disabled by default since vertical thrust correction is
+# usually more sensitive on hardware.
+AUG_ENABLE_XY = True
+AUG_ENABLE_Z = False
+AUG_START_TIME = 2.0 # Time after which augmentation starts applying (but the internal state is initialized from the measurements before that)
+AUG_RAMP_TIME = 2.0 # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
+AUG_MU_XY = 0.15
+AUG_MU_Z = 0.05
+
+# Safety limits for augmented outputs, used to prevent excessive correction
+AUG_V_LIMIT_Z = 4.0
+AUG_V_LIMIT_XY = .3
+AUG_MAX_ATTITUDE_DELTA_DEG = 10 # Max roll/pitch angle delta corresponding to the XY augmentation output, used to prevent excessive attitude correction from the augmentation
+# max thrust is 65535
+AUG_MAX_THRUST_DELTA = 4000.0 # Max thrust delta corresponding to the Z augmentation output, used to prevent excessive thrust correction from the augmentation
+AUG_DISABLE_IF_TILT_OVER_DEG = 35.0
 AUG_DISABLE_IF_SPEED_OVER_MPS = 2.0
-AUG_SIGN_XY = 1.0
-USE_BASELINE_BEFORE_AUG_START = True
 
 import argparse
+import json
 import logging
 import math
 import os
@@ -47,6 +63,7 @@ from typing import Dict, Tuple
 
 # Ensure local imports work no matter where the script is launched from.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+WAYPOINT_DATA_PATH = os.path.join(SCRIPT_DIR, "waypoint_data.json")
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
@@ -66,7 +83,6 @@ except ModuleNotFoundError as exc:
     raise
 
 from controller.attitude_controller import AttitudeController
-from controller.controller_pid import ControllerPID
 from controller.pid import constrain
 from controller.pid_types import (
     POSITION_RATE,
@@ -92,7 +108,7 @@ from motorRaw import MotorRaw
 
 logging.basicConfig(level=logging.ERROR)
 
-# Taken from Crazyflie platform defaults / current local motor_control.py.
+# Taken from Crazyflie platform defaults / current local motor mapping.
 THRUST_MIN = 0.02136263065537499
 THRUST_MAX = 0.2
 VMOTOR2THRUST0 = -0.014058926705279723
@@ -140,7 +156,7 @@ def _validate_trajectory() -> None:
             raise ValueError("Trajectory times must be non-decreasing")
         last_t = waypoint.time_s
 
-
+# Helper function to create a time axis for plotting based on the trajectory data and loop frequency.
 def _sample_trajectory(t_s: float) -> Tuple[float, float, float, float]:
     if len(SCRIPT_TRAJECTORY) == 1 or t_s <= SCRIPT_TRAJECTORY[0].time_s:
         p = SCRIPT_TRAJECTORY[0]
@@ -166,132 +182,100 @@ def _sample_trajectory(t_s: float) -> Tuple[float, float, float, float]:
     return p.x, p.y, p.z, p.yaw_deg
 
 
-class LSAugmentationXY:
-    """Least-squares XY augmentation ported from simulator augmented_controller.py."""
+json_data = {
+    "time_s": [],
+    "loop_hz": 0.0,
+    "sample_period_s": 0.0,
+    "position_x": [],
+    "setpoint_x": [],
+    "position_y": [],
+    "setpoint_y": [],
+    "position_z": [],
+    "setpoint_z": [],
+    "v_aug_x": [],
+    "v_aug_y": [],
+    "v_aug_z": [],
+}
+
+
+class DisturbanceAugmentor1D:
+    """1D augmentor that estimates disturbance from velocity error only."""
 
     def __init__(
         self,
         dt: float,
-        mu: float = AUG_MU,
-        v_limit_xy: float = AUG_V_LIMIT_XY,
-        start_time: float = AUG_START_TIME,
-        ramp_time: float = AUG_RAMP_TIME,
-        v_slew_limit_xy: float = AUG_V_SLEW_LIMIT_XY,
-        enabled: bool = AUG_ENABLED,
+        mu: float,
+        v_limit: float,
+        start_time: float,
+        ramp_time: float,
+        enabled: bool,
     ):
         self.dt = float(dt)
         self.mu = float(mu)
-        self.v_limit_xy = float(v_limit_xy)
+        self.v_limit = float(v_limit)
         self.start_time = float(start_time)
         self.ramp_time = float(ramp_time)
-        self.v_slew_limit_xy = float(v_slew_limit_xy)
         self.enabled = bool(enabled)
 
-        self._xhat = [[0.0, 0.0], [0.0, 0.0]]  # axis -> [pos_hat, vel_hat]
-        self._e_prev = [[0.0, 0.0], [0.0, 0.0]]
-        self._ef = [[0.0, 0.0], [0.0, 0.0]]
-        self._initialized = False
-        self._last_v = [0.0, 0.0]
+        self.vhat = 0.0
+        self.e_prev = 0.0
+        self.ef = 0.0
+        self.initialized = False
+        self.last_v = 0.0
 
-    def reset(self) -> None:
-        self._xhat = [[0.0, 0.0], [0.0, 0.0]]
-        self._e_prev = [[0.0, 0.0], [0.0, 0.0]]
-        self._ef = [[0.0, 0.0], [0.0, 0.0]]
-        self._initialized = False
-        self._last_v = [0.0, 0.0]
+    def reset(self, vel: float = 0.0) -> None:
+        self.vhat = float(vel)
+        self.e_prev = 0.0
+        self.ef = 0.0
+        self.initialized = False
+        self.last_v = 0.0
 
-    def _align_to_measurement(self, pos_xy: Tuple[float, float], vel_xy: Tuple[float, float]) -> None:
-        # Keep the digital twin synced before augmentation starts to avoid kick transients.
-        self._xhat[0][0], self._xhat[0][1] = pos_xy[0], vel_xy[0]
-        self._xhat[1][0], self._xhat[1][1] = pos_xy[1], vel_xy[1]
-        self._e_prev = [[0.0, 0.0], [0.0, 0.0]]
-        self._ef = [[0.0, 0.0], [0.0, 0.0]]
-        self._initialized = False
+    def _align_to_measurement(self, vel: float) -> None:
+        self.reset(vel=vel)
 
-    def _slew_limit(self, target: float, prev: float) -> float:
-        max_step = max(0.0, self.v_slew_limit_xy) * max(self.dt, 1e-6)
-        low = prev - max_step
-        high = prev + max_step
-        return float(constrain(target, low, high))
+    def _least_squares_correction(self) -> float:
+        # For scalar B = 1, argmin ||B v + e_f|| gives v* = -e_f.
+        return -self.ef
 
-    def _axis_virtual_input(self, axis: int, pos: float, vel: float, u_nom: float) -> float:
+    def compute(self, sim_time: float, vel: float, u_nom: float) -> float:
+        # u_nom is the cascaded PID's nominal acceleration command for this axis.
+        if not self.enabled:
+            self._align_to_measurement(vel)
+            return 0.0
+
+        if sim_time < self.start_time:
+            self._align_to_measurement(vel)
+            return 0.0
+
         dt = max(self.dt, 1e-6)
         mu = max(self.mu, 1e-6)
 
-        # Digital twin update with xhat_dot = [vel, u_nom]^T.
-        self._xhat[axis][0] += dt * vel
-        self._xhat[axis][1] += dt * u_nom
+        # Velocity-only nominal model: vhat_dot = u_nom.
+        self.vhat += dt * u_nom
+        e_vel = vel - self.vhat
 
-        e0 = pos - self._xhat[axis][0]
-        e1 = vel - self._xhat[axis][1]
-
-        if self._initialized:
-            e_dot0 = (e0 - self._e_prev[axis][0]) / dt
-            e_dot1 = (e1 - self._e_prev[axis][1]) / dt
+        if self.initialized:
+            e_dot = (e_vel - self.e_prev) / dt
         else:
-            e_dot0 = 0.0
-            e_dot1 = 0.0
+            e_dot = 0.0
 
-        # Stable FOH update: e_f += alpha * (e_dot - e_f), alpha = 1-exp(-dt/mu).
         alpha = 1.0 - math.exp(-dt / mu)
-        self._ef[axis][0] += alpha * (e_dot0 - self._ef[axis][0])
-        self._ef[axis][1] += alpha * (e_dot1 - self._ef[axis][1])
+        self.ef += alpha * (e_dot - self.ef)
 
-        self._e_prev[axis][0] = e0
-        self._e_prev[axis][1] = e1
+        self.e_prev = e_vel
+        self.initialized = True
 
-        # B=[0,1]^T -> v = -e_f[1].
-        v = -self._ef[axis][1] * AUG_SIGN_XY
-        return float(constrain(v, -self.v_limit_xy, self.v_limit_xy))
-
-    def compute(
-        self,
-        sim_time: float,
-        pos_xy: Tuple[float, float],
-        vel_xy: Tuple[float, float],
-        u_nom_xy: Tuple[float, float],
-    ) -> Tuple[float, float]:
-        if not self.enabled:
-            self._align_to_measurement(pos_xy, vel_xy)
-            self._initialized = True
-            self._last_v = [0.0, 0.0]
-            return 0.0, 0.0
-
-        if sim_time < self.start_time:
-            self._align_to_measurement(pos_xy, vel_xy)
-            self._last_v = [0.0, 0.0]
-            return 0.0, 0.0
-
-        vx_est = self._axis_virtual_input(0, pos_xy[0], vel_xy[0], u_nom_xy[0])
-        vy_est = self._axis_virtual_input(1, pos_xy[1], vel_xy[1], u_nom_xy[1])
-        self._initialized = True
-
+        v_est = self._least_squares_correction()
         if self.ramp_time > 0.0:
             ramp = constrain((sim_time - self.start_time) / self.ramp_time, 0.0, 1.0)
         else:
             ramp = 1.0
-        vx_tgt = vx_est * ramp
-        vy_tgt = vy_est * ramp
-
-        vx = self._slew_limit(vx_tgt, self._last_v[0])
-        vy = self._slew_limit(vy_tgt, self._last_v[1])
-        self._last_v = [vx, vy]
-
-        return self._last_v[0], self._last_v[1]
-
-    def diagnostics(self) -> Dict[str, float]:
-        return {
-            "v_aug_x": self._last_v[0],
-            "v_aug_y": self._last_v[1],
-            "ef_x_pos": self._ef[0][0],
-            "ef_x_vel": self._ef[0][1],
-            "ef_y_pos": self._ef[1][0],
-            "ef_y_vel": self._ef[1][1],
-        }
+        self.last_v = constrain(v_est * ramp, -self.v_limit, self.v_limit)
+        return self.last_v
 
 
 class AugmentedCascadeController:
-    """Hardware-side cascaded controller with XY LS augmentation."""
+    """Baseline cascaded PID with additive nominal-model correction."""
 
     def __init__(self, loop_hz: float):
         self.loop_hz = float(loop_hz)
@@ -302,8 +286,31 @@ class AugmentedCascadeController:
 
         self.attitude_controller = AttitudeController(update_dt=self.dt)
         self.position_controller = PositionController()
-        # Augmentation runs at the outer-loop cadence (typically 100 Hz).
-        self.augmentor = LSAugmentationXY(dt=self.outer_dt)
+
+        self.aug_x = DisturbanceAugmentor1D(
+            dt=self.outer_dt,
+            mu=AUG_MU_XY,
+            v_limit=AUG_V_LIMIT_XY,
+            start_time=AUG_START_TIME,
+            ramp_time=AUG_RAMP_TIME,
+            enabled=AUG_ENABLE_XY,
+        )
+        self.aug_y = DisturbanceAugmentor1D(
+            dt=self.outer_dt,
+            mu=AUG_MU_XY,
+            v_limit=AUG_V_LIMIT_XY,
+            start_time=AUG_START_TIME,
+            ramp_time=AUG_RAMP_TIME,
+            enabled=AUG_ENABLE_XY,
+        )
+        self.aug_z = DisturbanceAugmentor1D(
+            dt=self.outer_dt,
+            mu=AUG_MU_Z,
+            v_limit=AUG_V_LIMIT_Z,
+            start_time=AUG_START_TIME,
+            ramp_time=AUG_RAMP_TIME,
+            enabled=AUG_ENABLE_Z,
+        )
 
         self.control = Control()
         self.attitude_desired = Attitude()
@@ -312,41 +319,35 @@ class AugmentedCascadeController:
         self._last_diag: Dict[str, float] = {
             "v_aug_x": 0.0,
             "v_aug_y": 0.0,
-            "ef_x_pos": 0.0,
-            "ef_x_vel": 0.0,
-            "ef_y_pos": 0.0,
+            "v_aug_z": 0.0,
         }
 
     @staticmethod
-    def _nominal_accel_from_attitude(
-        roll_deg: float, pitch_deg: float, yaw_deg: float
-    ) -> Tuple[float, float]:
-        # Inverse of simulator mapping used in controller.py:
-        # des_phi = (ax*sin(yaw)-ay*cos(yaw))/g
-        # des_theta = (ax*cos(yaw)+ay*sin(yaw))/g
-        phi = math.radians(roll_deg)
-        theta = math.radians(pitch_deg)
-        yaw = math.radians(yaw_deg)
-        ax = GRAVITY * (phi * math.sin(yaw) + theta * math.cos(yaw))
-        ay = GRAVITY * (-phi * math.cos(yaw) + theta * math.sin(yaw))
+    
+    def _nominal_xy_input(roll_deg: float, pitch_deg: float, yaw_deg: float) -> Tuple[float, float]:
+        roll_rad = math.radians(roll_deg)
+        pitch_rad = math.radians(pitch_deg)
+        yaw_rad = math.radians(yaw_deg)
+        ax = GRAVITY * (roll_rad * math.sin(yaw_rad) + pitch_rad * math.cos(yaw_rad))
+        ay = GRAVITY * (-roll_rad * math.cos(yaw_rad) + pitch_rad * math.sin(yaw_rad))
         return ax, ay
 
     @staticmethod
-    def _attitude_delta_from_aug(
-        v_aug_x: float, v_aug_y: float, yaw_deg: float
-    ) -> Tuple[float, float]:
-        yaw = math.radians(yaw_deg)
-        d_roll_rad = (v_aug_x * math.sin(yaw) - v_aug_y * math.cos(yaw)) / GRAVITY
-        d_pitch_rad = (v_aug_x * math.cos(yaw) + v_aug_y * math.sin(yaw)) / GRAVITY
+    def _attitude_delta_from_xy(v_aug_x: float, v_aug_y: float, yaw_deg: float) -> Tuple[float, float]:
+        yaw_rad = math.radians(yaw_deg)
+        d_roll_rad = (v_aug_x * math.sin(yaw_rad) - v_aug_y * math.cos(yaw_rad)) / GRAVITY
+        d_pitch_rad = (v_aug_x * math.cos(yaw_rad) + v_aug_y * math.sin(yaw_rad)) / GRAVITY
         d_roll_deg = math.degrees(d_roll_rad)
         d_pitch_deg = math.degrees(d_pitch_rad)
-        d_roll_deg = constrain(d_roll_deg, -AUG_MAX_ATT_DELTA_DEG, AUG_MAX_ATT_DELTA_DEG)
-        d_pitch_deg = constrain(d_pitch_deg, -AUG_MAX_ATT_DELTA_DEG, AUG_MAX_ATT_DELTA_DEG)
+        d_roll_deg = constrain(d_roll_deg, -AUG_MAX_ATTITUDE_DELTA_DEG, AUG_MAX_ATTITUDE_DELTA_DEG)
+        d_pitch_deg = constrain(d_pitch_deg, -AUG_MAX_ATTITUDE_DELTA_DEG, AUG_MAX_ATTITUDE_DELTA_DEG)
         return d_roll_deg, d_pitch_deg
 
     def reset(self, state: State) -> None:
         self.tick = 0
-        self.augmentor.reset()
+        self.aug_x.reset(vel=state.velocity.x)
+        self.aug_y.reset(vel=state.velocity.y)
+        self.aug_z.reset(vel=state.velocity.z)
         self.attitude_controller.reset_all_pid(
             state.attitude.roll, state.attitude.pitch, state.attitude.yaw
         )
@@ -358,6 +359,9 @@ class AugmentedCascadeController:
         self.attitude_desired.yaw = state.attitude.yaw
         self.rate_desired = Attitude()
         self.actuator_thrust = 0.0
+        self._last_diag["v_aug_x"] = 0.0
+        self._last_diag["v_aug_y"] = 0.0
+        self._last_diag["v_aug_z"] = 0.0
 
     def step(
         self, setpoint: Setpoint, sensors: SensorData, state: State, sim_time: float
@@ -365,7 +369,6 @@ class AugmentedCascadeController:
         self.tick += 1
         update_outer = (self.tick == 1) or ((self.tick % self.outer_div) == 0)
 
-        # Match firmware-style yaw setpoint handling.
         if setpoint.mode.yaw == StabMode.MODE_VELOCITY:
             self.attitude_desired.yaw = cap_angle(
                 self.attitude_desired.yaw + setpoint.attitude_rate.yaw * self.dt
@@ -375,58 +378,76 @@ class AugmentedCascadeController:
         self.attitude_desired.yaw = cap_angle(self.attitude_desired.yaw)
 
         if update_outer:
-            thrust_nom, attitude_nom = self.position_controller.position_controller(
-                setpoint, state
-            )
+            thrust_nom, attitude_nom = self.position_controller.position_controller(setpoint, state)
             self.actuator_thrust = thrust_nom
 
             tilt_deg = max(abs(state.attitude.roll), abs(state.attitude.pitch))
             horiz_speed = math.hypot(state.velocity.x, state.velocity.y)
-            apply_aug = (
+            apply_xy = (
                 setpoint.mode.x == StabMode.MODE_ABS
                 and setpoint.mode.y == StabMode.MODE_ABS
-                and self.actuator_thrust > 0.0
                 and tilt_deg < AUG_DISABLE_IF_TILT_OVER_DEG
                 and horiz_speed < AUG_DISABLE_IF_SPEED_OVER_MPS
             )
-            if apply_aug:
-                # Convert nominal attitude command back to nominal XY acceleration.
-                a_nom_x, a_nom_y = self._nominal_accel_from_attitude(
+
+            if apply_xy:
+                u_nom_x, u_nom_y = self._nominal_xy_input(
                     attitude_nom.roll, attitude_nom.pitch, self.attitude_desired.yaw
                 )
-                v_aug_x, v_aug_y = self.augmentor.compute(
+                v_aug_x = self.aug_x.compute(
                     sim_time=sim_time,
-                    pos_xy=(state.position.x, state.position.y),
-                    vel_xy=(state.velocity.x, state.velocity.y),
-                    u_nom_xy=(a_nom_x, a_nom_y),
+                    vel=state.velocity.x,
+                    u_nom=u_nom_x,
+                )
+                v_aug_y = self.aug_y.compute(
+                    sim_time=sim_time,
+                    vel=state.velocity.y,
+                    u_nom=u_nom_y,
                 )
             else:
-                v_aug_x, v_aug_y = 0.0, 0.0
-                self.augmentor.reset()
-            self._last_diag = self.augmentor.diagnostics()
-            if not apply_aug:
-                self._last_diag["v_aug_x"] = 0.0
-                self._last_diag["v_aug_y"] = 0.0
+                self.aug_x.reset(vel=state.velocity.x)
+                self.aug_y.reset(vel=state.velocity.y)
+                v_aug_x = 0.0
+                v_aug_y = 0.0
 
-            # Inject augmented virtual input as attitude delta (equivalent XY accel add).
-            d_roll, d_pitch = self._attitude_delta_from_aug(
+            d_roll, d_pitch = self._attitude_delta_from_xy(
                 v_aug_x, v_aug_y, self.attitude_desired.yaw
             )
-            roll_des = attitude_nom.roll + d_roll
-            pitch_des = attitude_nom.pitch + d_pitch
-
             self.attitude_desired.roll = constrain(
-                roll_des,
+                attitude_nom.roll + d_roll,
                 -self.position_controller.r_limit,
                 self.position_controller.r_limit,
             )
             self.attitude_desired.pitch = constrain(
-                pitch_des,
+                attitude_nom.pitch + d_pitch,
                 -self.position_controller.p_limit,
                 self.position_controller.p_limit,
             )
 
-        # Manual overrides for direct modes.
+            apply_z = setpoint.mode.z == StabMode.MODE_ABS and AUG_ENABLE_Z
+            if apply_z:
+                u_nom_z = (
+                    thrust_nom - self.position_controller.thrust_base
+                ) / self.position_controller.thrust_scale
+                v_aug_z = self.aug_z.compute(
+                    sim_time=sim_time,
+                    vel=state.velocity.z,
+                    u_nom=u_nom_z,
+                )
+                thrust_delta = constrain(
+                    v_aug_z * self.position_controller.thrust_scale,
+                    -AUG_MAX_THRUST_DELTA,
+                    AUG_MAX_THRUST_DELTA,
+                )
+                self.actuator_thrust = constrain(thrust_nom + thrust_delta, 0.0, UINT16_MAX)
+            else:
+                self.aug_z.reset(vel=state.velocity.z)
+                v_aug_z = 0.0
+
+            self._last_diag["v_aug_x"] = v_aug_x
+            self._last_diag["v_aug_y"] = v_aug_y
+            self._last_diag["v_aug_z"] = v_aug_z
+
         if setpoint.mode.z == StabMode.MODE_DISABLE:
             self.actuator_thrust = setpoint.thrust
 
@@ -437,7 +458,6 @@ class AugmentedCascadeController:
             self.attitude_desired.roll = setpoint.attitude.roll
             self.attitude_desired.pitch = setpoint.attitude.pitch
 
-        # Attitude loop.
         (
             self.rate_desired.roll,
             self.rate_desired.pitch,
@@ -459,7 +479,6 @@ class AugmentedCascadeController:
             self.rate_desired.pitch = setpoint.attitude_rate.pitch
             self.attitude_controller.reset_pitch_attitude_pid(state.attitude.pitch)
 
-        # Rate loop (note: gyro.y sign follows existing implementation).
         self.attitude_controller.correct_rate_pid(
             sensors.gyro.x,
             -sensors.gyro.y,
@@ -476,19 +495,11 @@ class AugmentedCascadeController:
         self.control.yaw = -yaw_out
         self.control.thrust = self.actuator_thrust
 
-        # Safety/reset on zero thrust.
         if self.control.thrust == 0:
             self.control.roll = 0
             self.control.pitch = 0
             self.control.yaw = 0
-            self.attitude_controller.reset_all_pid(
-                state.attitude.roll, state.attitude.pitch, state.attitude.yaw
-            )
-            self.position_controller.reset_all_pid(
-                state.position.x, state.position.y, state.position.z
-            )
-            self.augmentor.reset()
-            self.attitude_desired.yaw = state.attitude.yaw
+            self.reset(state)
 
         return self.control, dict(self._last_diag)
 
@@ -514,25 +525,13 @@ class HostAugmentedPWMPositionController:
         self.land_z = land_z
         self.land_seconds = land_seconds
         self.do_land = do_land
-        self._control_time_origin = 0.0
+        self._log_time_origin = None
+        self.controller_time_origin = 0.0
 
-        # Known-stable baseline controller (same path as host_pid_pwm_position.py).
-        self.controller_pid = ControllerPID()
-        self.controller_pid.init()
-        self.stabilizer_step = 1
-        self.control = Control()
+        json_data["loop_hz"] = self.loop_hz
+        json_data["sample_period_s"] = self.loop_period
 
-        # Augmented controller used after startup gate.
-        self.controller_aug = AugmentedCascadeController(loop_hz=loop_hz)
-        self._aug_active = False
-        self._last_diag: Dict[str, float] = {
-            "v_aug_x": 0.0,
-            "v_aug_y": 0.0,
-            "ef_x_pos": 0.0,
-            "ef_x_vel": 0.0,
-            "ef_y_pos": 0.0,
-            "ef_y_vel": 0.0,
-        }
+        self.controller = AugmentedCascadeController(loop_hz=loop_hz)
 
         self.cf_state = State(
             attitude=Attitude(),
@@ -609,12 +608,10 @@ class HostAugmentedPWMPositionController:
 
                 scf.cf.param.set_value("motorPowerSet.enable", 1)
                 self._wait_for_logs(timeout_s=3.0)
-                self.controller_pid.init()
-                self.stabilizer_step = 1
-                self.controller_aug.reset(self.cf_state)
-                self._aug_active = False
+                self.controller.reset(self.cf_state)
                 self._spinup(duration_s=1.0)
-                self._control_time_origin = time.monotonic()
+                self._log_time_origin = time.monotonic()
+                self.controller_time_origin = self._log_time_origin
 
                 if USE_SCRIPT_TRAJECTORY:
                     traj_duration = SCRIPT_TRAJECTORY[-1].time_s
@@ -636,6 +633,8 @@ class HostAugmentedPWMPositionController:
                 if logs_started:
                     self.log_state.stop()
                     self.log_sensor.stop()
+                with open(WAYPOINT_DATA_PATH, "w", encoding="utf-8") as json_file:
+                    json.dump(json_data, json_file, indent=4)
 
     def _wait_for_logs(self, timeout_s: float):
         end = time.monotonic() + timeout_s
@@ -668,16 +667,30 @@ class HostAugmentedPWMPositionController:
         next_print = time.monotonic()
 
         while time.monotonic() < end:
-            elapsed = time.monotonic() - phase_start
+            now = time.monotonic()
             if follow_script_trajectory:
+                elapsed = now - phase_start
                 x, y, z, yaw = _sample_trajectory(elapsed)
                 self.cf_setpoint.position.x = x
                 self.cf_setpoint.position.y = y
                 self.cf_setpoint.position.z = z
                 self.cf_setpoint.attitude.yaw = yaw
 
-            sim_time = time.monotonic() - self._control_time_origin
-            self._control_step(sim_time=sim_time)
+            if self._log_time_origin is None:
+                self._log_time_origin = now
+            json_data["time_s"].append(now - self._log_time_origin)
+            json_data["position_x"].append(self.cf_state.position.x)
+            json_data["setpoint_x"].append(self.cf_setpoint.position.x)
+            json_data["position_y"].append(self.cf_state.position.y)
+            json_data["setpoint_y"].append(self.cf_setpoint.position.y)
+            json_data["position_z"].append(self.cf_state.position.z)
+            json_data["setpoint_z"].append(self.cf_setpoint.position.z)
+
+            self._control_step(sim_time=now - self.controller_time_origin)
+
+            json_data["v_aug_x"].append(self.controller._last_diag["v_aug_x"])
+            json_data["v_aug_y"].append(self.controller._last_diag["v_aug_y"])
+            json_data["v_aug_z"].append(self.controller._last_diag["v_aug_z"])
 
             next_tick += self.loop_period
             sleep_time = next_tick - time.monotonic()
@@ -687,8 +700,6 @@ class HostAugmentedPWMPositionController:
                 next_tick = time.monotonic()
 
             if time.monotonic() >= next_print:
-                diag = self._last_diag
-                mode = "AUG" if self._aug_active else "PID"
                 print(
                     "state "
                     f"x={self.cf_state.position.x:.2f} "
@@ -697,48 +708,26 @@ class HostAugmentedPWMPositionController:
                     f"sp=({self.cf_setpoint.position.x:.2f},"
                     f"{self.cf_setpoint.position.y:.2f},"
                     f"{self.cf_setpoint.position.z:.2f}) | "
-                    f"mode={mode} "
-                    f"thrust={self.control.thrust:.1f} "
-                    f"roll={self.control.roll:.1f} "
-                    f"pitch={self.control.pitch:.1f} "
-                    f"yaw={self.control.yaw:.1f} | "
-                    f"v_aug=({diag['v_aug_x']:.2f},{diag['v_aug_y']:.2f})"
+                    f"thrust={self.controller.control.thrust:.1f} "
+                    f"roll={self.controller.control.roll:.1f} "
+                    f"pitch={self.controller.control.pitch:.1f} "
+                    f"yaw={self.controller.control.yaw:.1f} | "
+                    f"v*=({self.controller._last_diag['v_aug_x']:.2f},"
+                    f"{self.controller._last_diag['v_aug_y']:.2f},"
+                    f"{self.controller._last_diag['v_aug_z']:.2f})"
                 )
                 next_print = time.monotonic() + 0.25
 
     def _control_step(self, sim_time: float):
-        use_aug = AUG_ENABLED and (
-            (not USE_BASELINE_BEFORE_AUG_START) or (sim_time >= AUG_START_TIME)
+        control, _ = self.controller.step(
+            setpoint=self.cf_setpoint,
+            sensors=self.cf_sensors,
+            state=self.cf_state,
+            sim_time=sim_time,
         )
-        if use_aug:
-            if not self._aug_active:
-                # Re-seed augmented controller from current state for bumpless switch.
-                self.controller_aug.reset(self.cf_state)
-                self._aug_active = True
-
-            control, diag = self.controller_aug.step(
-                setpoint=self.cf_setpoint,
-                sensors=self.cf_sensors,
-                state=self.cf_state,
-                sim_time=sim_time,
-            )
-            self.control = control
-            self._last_diag = diag
-        else:
-            self._aug_active = False
-            self.controller_pid.controller_pid(
-                self.control,
-                self.cf_setpoint,
-                self.cf_sensors,
-                self.cf_state,
-                self.stabilizer_step,
-            )
-            self.stabilizer_step += 1
-            self._last_diag["v_aug_x"] = 0.0
-            self._last_diag["v_aug_y"] = 0.0
 
         raw = MotorThrust()
-        self._power_distributor(self.control, raw)
+        self._power_distributor(control, raw)
         compensated = MotorThrust()
         self._battery_compensator(raw, compensated)
         pwm = MotorThrust()
@@ -812,18 +801,10 @@ class HostAugmentedPWMPositionController:
             motor_thrust_bat_comp.motor_4,
         ]
         reduction = max(0.0, max(thrusts) - UINT16_MAX)
-        motor_thrust_pwm.motor_1 = max(
-            IDLE_THRUST, motor_thrust_bat_comp.motor_1 - reduction
-        )
-        motor_thrust_pwm.motor_2 = max(
-            IDLE_THRUST, motor_thrust_bat_comp.motor_2 - reduction
-        )
-        motor_thrust_pwm.motor_3 = max(
-            IDLE_THRUST, motor_thrust_bat_comp.motor_3 - reduction
-        )
-        motor_thrust_pwm.motor_4 = max(
-            IDLE_THRUST, motor_thrust_bat_comp.motor_4 - reduction
-        )
+        motor_thrust_pwm.motor_1 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_1 - reduction)
+        motor_thrust_pwm.motor_2 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_2 - reduction)
+        motor_thrust_pwm.motor_3 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_3 - reduction)
+        motor_thrust_pwm.motor_4 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_4 - reduction)
 
     def _stop_motors(self):
         end = time.monotonic() + 1.0
@@ -859,7 +840,7 @@ class HostAugmentedPWMPositionController:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Host-side augmented cascaded controller with raw motor PWM output."
+        description="Host-side augmented cascaded PID with raw motor PWM output."
     )
     parser.add_argument(
         "--uri",
@@ -891,9 +872,9 @@ def parse_args():
         help="Desired yaw (deg), used when USE_SCRIPT_TRAJECTORY=False",
     )
     parser.add_argument(
-        "--run-seconds", type=float, default=5.0, help="Main control duration"
+        "--run-seconds", type=float, default=5.0, help="Main control duration before landing"
     )
-    parser.add_argument("--loop-hz", type=float, default=500.0, help="Host control loop rate")
+    parser.add_argument("--loop-hz", type=float, default=200.0, help="Host control loop rate")
     parser.add_argument("--land-z", type=float, default=0.05, help="Landing target z (m)")
     parser.add_argument("--land-seconds", type=float, default=3.0, help="Landing duration")
     parser.add_argument(
@@ -906,7 +887,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    runner = HostAugmentedPWMPositionController(
+    controller = HostAugmentedPWMPositionController(
         uri=args.uri,
         target_x=args.x,
         target_y=args.y,
@@ -919,10 +900,10 @@ def main():
         do_land=not args.no_land,
     )
     try:
-        runner.run()
+        controller.run()
     except KeyboardInterrupt:
         print("Interrupted, stopping motors")
-        runner._stop_motors()
+        controller._stop_motors()
         sys.exit(130)
     except Exception as exc:
         msg = str(exc)
@@ -930,10 +911,10 @@ def main():
             print("Fatal error: Crazyradio is busy.")
             print("Close other tools using the radio (for example `cfclient`) and retry.")
             print(f"URI: {args.uri}")
-            runner._stop_motors()
+            controller._stop_motors()
             sys.exit(1)
         print(f"Fatal error: {exc}")
-        runner._stop_motors()
+        controller._stop_motors()
         raise
 
 

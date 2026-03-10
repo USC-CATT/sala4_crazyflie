@@ -12,13 +12,8 @@ and publishing motor commands on the raw motor CRTP port.
 # time_s is relative to the start of the main control phase.
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
-    (1.0, 0.0, 0.0, 0.5, 0.0),
-    (5.0, 0.5, 0.0, 0.75, 0.0),
-    (11.0, 0.0, -0.5, 0.5, 0.0),
-    (20.0, -0.5, 0.5, 0.75, 0.0),
-    (25.0, 0.0, 0.0, 0.5, 0.0),
-    # (10.0, 0.0, 0.0, 1, 0.0),
-    # (9.0, 0.0, 0.0, 1, 0.0),
+    (0.0, 0.0, 0.0, 0.5, 0.0),
+    (8.0, 0.0, 0.0, 0.5, 0.0),
 ]
 # after the last waypoint, there will be a default landing to z=0.05m in three seconds if --no-land is not specified, regardless of the last waypoint's z value
 
@@ -31,10 +26,10 @@ import time
 import json
 from dataclasses import dataclass
 from typing import Tuple
-from plotter import TrajectoryPlot
 
 # Ensure local imports work no matter where the script is launched from.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+WAYPOINT_DATA_PATH = os.path.join(SCRIPT_DIR, "waypoint_data.json")
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
@@ -147,7 +142,17 @@ def _sample_trajectory(t_s: float) -> Tuple[float, float, float, float]:
     return p.x, p.y, p.z, p.yaw_deg
     
 
-json_data = {"position_x": [], "setpoint_x": [],"position_y": [], "setpoint_y": [],"position_z": [], "setpoint_z": [],}
+json_data = {
+    "time_s": [],
+    "loop_hz": 0.0,
+    "sample_period_s": 0.0,
+    "position_x": [],
+    "setpoint_x": [],
+    "position_y": [],
+    "setpoint_y": [],
+    "position_z": [],
+    "setpoint_z": [],
+}
 
 
 class HostPIDPWMPositionController:
@@ -171,7 +176,10 @@ class HostPIDPWMPositionController:
         self.land_z = land_z
         self.land_seconds = land_seconds
         self.do_land = do_land
+        self._log_time_origin = None
         
+        json_data["loop_hz"] = self.loop_hz
+        json_data["sample_period_s"] = self.loop_period
 
         self.controller = ControllerPID()
         self.controller.init()
@@ -254,6 +262,7 @@ class HostPIDPWMPositionController:
                 scf.cf.param.set_value("motorPowerSet.enable", 1)
                 self._wait_for_logs(timeout_s=3.0)
                 self._spinup(duration_s=1.0)
+                self._log_time_origin = time.monotonic()
                 if USE_SCRIPT_TRAJECTORY:
                     traj_duration = SCRIPT_TRAJECTORY[-1].time_s
                     print(f"Following script trajectory for {traj_duration:.1f}s")
@@ -274,7 +283,7 @@ class HostPIDPWMPositionController:
                 if logs_started:
                     self.log_state.stop()
                     self.log_sensor.stop()
-                with open("./waypoint_data.json", 'w') as json_file:
+                with open(WAYPOINT_DATA_PATH, "w", encoding="utf-8") as json_file:
                     json.dump(json_data, json_file, indent=4)
 
     def _wait_for_logs(self, timeout_s: float):
@@ -308,14 +317,18 @@ class HostPIDPWMPositionController:
         next_print = time.monotonic()
 
         while time.monotonic() < end:
+            now = time.monotonic()
             if follow_script_trajectory:
-                elapsed = time.monotonic() - phase_start
+                elapsed = now - phase_start
                 x, y, z, yaw = _sample_trajectory(elapsed)
                 self.cf_setpoint.position.x = x
                 self.cf_setpoint.position.y = y
                 self.cf_setpoint.position.z = z
                 self.cf_setpoint.attitude.yaw = yaw
             
+            if self._log_time_origin is None:
+                self._log_time_origin = now
+            json_data["time_s"].append(now - self._log_time_origin)
             json_data["position_x"].append(self.cf_state.position.x)
             json_data["setpoint_x"].append(self.cf_setpoint.position.x)
             json_data["position_y"].append(self.cf_state.position.y)

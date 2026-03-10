@@ -2,14 +2,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 import threading
+import os
 from collections import deque
 import json
 
 
 data = {}
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+WAYPOINT_DATA_PATH = os.path.join(SCRIPT_DIR, "waypoint_data.json")
 
-with open("waypoint_data.json", "r", encoding="utf-8") as file:
-    data = json.load(file)
+try:
+    with open(WAYPOINT_DATA_PATH, "r", encoding="utf-8") as file:
+        data = json.load(file)
+except FileNotFoundError:
+    data = {}
 
 
 class TrajectoryPlot:
