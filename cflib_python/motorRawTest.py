@@ -55,7 +55,7 @@ def linkError(error):
 if __name__ == "__main__":
     cflib.crtp.init_drivers()
     
-    lg_stab = LogConfig(name='State Estimator', period_in_ms=10)
+    lg_stab = LogConfig(name='State Estimator', period_in_ms=60)
     # We use FP16 to fit more variables in a single log packet
     lg_stab.add_variable('stateEstimate.vx', 'FP16')
     lg_stab.add_variable('stateEstimate.vy', 'FP16')

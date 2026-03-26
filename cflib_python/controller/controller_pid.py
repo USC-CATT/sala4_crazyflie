@@ -9,7 +9,7 @@ from typing import Optional
 
 from .attitude_controller import AttitudeController
 from .position_controller import PositionController
-from .pid_types import (
+from .controller_types import (
     ATTITUDE_RATE,
     POSITION_RATE,
     Attitude,

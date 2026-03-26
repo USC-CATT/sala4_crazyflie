@@ -12,8 +12,7 @@ from cflib.utils.callbacks import Caller
 
 logger = logging.getLogger(__name__)
 
-# A generic location packet contains type and data. When received the data
-# may be decoded by the lib.
+
 MotorRawPacket = collections.namedtuple("motorRawPacket", ["m1", "m2", "m3", "m4"])
 MOTOR_RAW_PORT = 0x09
 
@@ -27,9 +26,6 @@ class MotorRaw:
     SETPOINT_CH = 0
 
     def __init__(self, crazyflie=None):
-        """
-        Initialize the Extpos object.
-        """
         self._cf = crazyflie
 
         self.receivedLocationPacket = Caller()
@@ -42,8 +38,7 @@ class MotorRaw:
         print(packet.data)
         if len(packet.data) < 1:
             logger.warning(
-                "Localization packet received with incorrect"
-                + "length (length is {})".format(len(packet.data))
+                f"Packet received with incorrect length (length is {len(packet.data)})"
             )
             return
         return

@@ -12,20 +12,23 @@ and publishing motor commands on the raw motor CRTP port.
 # time_s is relative to the start of the main control phase.
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
-    (0.0, 0.0, 0.0, 0.5, 0.0),
-    (8.0, 0.0, 0.0, 0.5, 0.0),
+    (0.0, 0.0, 0.0, 1.5, 0.0),
+    (4000.0, 0.0, 0.0, 1.5, 0.0),
 ]
 # after the last waypoint, there will be a default landing to z=0.05m in three seconds if --no-land is not specified, regardless of the last waypoint's z value
 
 import argparse
+import json
 import logging
 import math
 import os
 import sys
 import time
-import json
 from dataclasses import dataclass
 from typing import Tuple
+
+import numpy as np
+from pynput import keyboard
 
 # Ensure local imports work no matter where the script is launched from.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +52,7 @@ except ModuleNotFoundError as exc:
     raise
 
 from controller.controller_pid import ControllerPID
-from controller.pid_types import (
+from controller.controller_types import (
     AccData,
     Attitude,
     AttitudeRate,
@@ -57,15 +60,16 @@ from controller.pid_types import (
     Control,
     GyroData,
     Position,
+    Quaternion,
     SensorData,
     Setpoint,
     SetpointMode,
     StabMode,
     State,
     Velocity,
+    quat2rpy,
 )
 from motorRaw import MotorRaw
-
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -140,7 +144,7 @@ def _sample_trajectory(t_s: float) -> Tuple[float, float, float, float]:
 
     p = SCRIPT_TRAJECTORY[-1]
     return p.x, p.y, p.z, p.yaw_deg
-    
+
 
 json_data = {
     "time_s": [],
@@ -177,7 +181,7 @@ class HostPIDPWMPositionController:
         self.land_seconds = land_seconds
         self.do_land = do_land
         self._log_time_origin = None
-        
+
         json_data["loop_hz"] = self.loop_hz
         json_data["sample_period_s"] = self.loop_period
 
@@ -220,7 +224,7 @@ class HostPIDPWMPositionController:
         self.cf = Crazyflie(rw_cache="./cache")
         self.motor_raw = MotorRaw(crazyflie=self.cf)
 
-        self.log_state = LogConfig(name="HostPIDState", period_in_ms=10)
+        self.log_state = LogConfig(name="HostPIDState", period_in_ms=60)
         self.log_state.add_variable("stateEstimate.vx", "FP16")
         self.log_state.add_variable("stateEstimate.vy", "FP16")
         self.log_state.add_variable("stateEstimate.vz", "FP16")
@@ -230,18 +234,35 @@ class HostPIDPWMPositionController:
         self.log_state.add_variable("stateEstimate.x", "FP16")
         self.log_state.add_variable("stateEstimate.y", "FP16")
         self.log_state.add_variable("stateEstimate.z", "FP16")
-        self.log_state.add_variable("stateEstimate.roll", "FP16")
         self.log_state.add_variable("stateEstimate.pitch", "FP16")
+        self.log_state.add_variable("stateEstimate.roll", "FP16")
         self.log_state.add_variable("stateEstimate.yaw", "FP16")
-        self.log_state.add_variable("pm.vbat", "FP16")
+        # self.log_state.add_variable("stateEstimate.qx", "FP16")
+        # self.log_state.add_variable("stateEstimate.qy", "FP16")
+        # self.log_state.add_variable("stateEstimate.qz", "FP16")
+        # self.log_state.add_variable("stateEstimate.qw", "FP16")
 
-        self.log_sensor = LogConfig(name="HostPIDSensor", period_in_ms=10)
+        self.log_sensor = LogConfig(name="HostPIDSensor", period_in_ms=60)
         self.log_sensor.add_variable("gyro.x", "float")
         self.log_sensor.add_variable("gyro.y", "float")
         self.log_sensor.add_variable("gyro.z", "float")
         self.log_sensor.add_variable("acc.x", "float")
         self.log_sensor.add_variable("acc.y", "float")
         self.log_sensor.add_variable("acc.z", "float")
+        self.log_sensor.add_variable("pm.vbat", "FP16")
+        self.killed = False
+
+        self.listener = keyboard.Listener(on_press=self.on_press)
+        self.listener.start()
+
+    def kill(self):
+        print("[KILLING DRONE]")
+        self.killed = True
+        self._stop_motors()
+
+    def on_press(self, key):
+        if key == keyboard.Key.space:
+            self.kill()
 
     def run(self):
         cflib.crtp.init_drivers()
@@ -272,8 +293,10 @@ class HostPIDPWMPositionController:
                 else:
                     self._control_for(duration_s=self.run_seconds)
 
-                if self.do_land:
-                    print(f"Landing target z={self.land_z:.2f} for {self.land_seconds:.1f}s")
+                if self.do_land and not self.killed:
+                    print(
+                        f"Landing target z={self.land_z:.2f} for {self.land_seconds:.1f}s"
+                    )
                     self.cf_setpoint.position.z = self.land_z
                     self._control_for(
                         duration_s=self.land_seconds, follow_script_trajectory=False
@@ -317,6 +340,8 @@ class HostPIDPWMPositionController:
         next_print = time.monotonic()
 
         while time.monotonic() < end:
+            if self.killed:
+                return
             now = time.monotonic()
             if follow_script_trajectory:
                 elapsed = now - phase_start
@@ -325,7 +350,7 @@ class HostPIDPWMPositionController:
                 self.cf_setpoint.position.y = y
                 self.cf_setpoint.position.z = z
                 self.cf_setpoint.attitude.yaw = yaw
-            
+
             if self._log_time_origin is None:
                 self._log_time_origin = now
             json_data["time_s"].append(now - self._log_time_origin)
@@ -358,10 +383,12 @@ class HostPIDPWMPositionController:
                     f"pitch={self.control.pitch:.1f} "
                     f"yaw={self.control.yaw:.1f}"
                 )
-                
+
                 next_print = time.monotonic() + 0.25
 
     def _control_step(self):
+        if self.killed:
+            return
         self.controller.controller_pid(
             self.control,
             self.cf_setpoint,
@@ -466,10 +493,25 @@ class HostPIDPWMPositionController:
         self.cf_state.acc.x = data["stateEstimate.ax"]
         self.cf_state.acc.y = data["stateEstimate.ay"]
         self.cf_state.acc.z = data["stateEstimate.az"]
-        self.cf_state.attitude.pitch = data["stateEstimate.pitch"]
         self.cf_state.attitude.roll = data["stateEstimate.roll"]
+        self.cf_state.attitude.pitch = data["stateEstimate.pitch"]
         self.cf_state.attitude.yaw = data["stateEstimate.yaw"]
-        self.cf_vbat = data["pm.vbat"]
+
+        # qx = data["stateEstimate.qx"]
+        # qy = data["stateEstimate.qy"]
+        # qz = data["stateEstimate.qz"]
+        # qw = data["stateEstimate.qw"]
+        # q = Quaternion(w=qw, x=qx, y=qy, z=qz)
+        # rpy = quat2rpy(q)
+        # self.cf_state.attitude_quaternion.x = qx
+        # self.cf_state.attitude_quaternion.y = qy
+        # self.cf_state.attitude_quaternion.z = qz
+        # self.cf_state.attitude_quaternion.w = qw
+
+        # self.cf_state.attitude.roll = np.degrees(rpy.x)
+        # self.cf_state.attitude.pitch = np.degrees(rpy.y)
+        # self.cf_state.attitude.yaw = np.degrees(rpy.z)
+        
         self._have_state = True
 
     def _log_sensor_callback(self, _timestamp, data, _logconf):
@@ -479,6 +521,7 @@ class HostPIDPWMPositionController:
         self.cf_sensors.acc.x = data["acc.x"]
         self.cf_sensors.acc.y = data["acc.y"]
         self.cf_sensors.acc.z = data["acc.z"]
+        self.cf_vbat = data["pm.vbat"]
         self._have_sensor = True
 
 
@@ -516,11 +559,20 @@ def parse_args():
         help="Desired yaw (deg), used when USE_SCRIPT_TRAJECTORY=False",
     )
     parser.add_argument(
-        "--run-seconds", type=float, default=5.0, help="Main control duration before landing"
+        "--run-seconds",
+        type=float,
+        default=5.0,
+        help="Main control duration before landing",
     )
-    parser.add_argument("--loop-hz", type=float, default=200.0, help="Host control loop rate")
-    parser.add_argument("--land-z", type=float, default=0.05, help="Landing target z (m)")
-    parser.add_argument("--land-seconds", type=float, default=3.0, help="Landing duration")
+    parser.add_argument(
+        "--loop-hz", type=float, default=200.0, help="Host control loop rate"
+    )
+    parser.add_argument(
+        "--land-z", type=float, default=0.05, help="Landing target z (m)"
+    )
+    parser.add_argument(
+        "--land-seconds", type=float, default=3.0, help="Landing duration"
+    )
     parser.add_argument(
         "--no-land",
         action="store_true",
@@ -553,7 +605,9 @@ def main():
         msg = str(exc)
         if "Resource busy" in msg or "Couldn't load link driver" in msg:
             print("Fatal error: Crazyradio is busy.")
-            print("Close other tools using the radio (for example `cfclient`) and retry.")
+            print(
+                "Close other tools using the radio (for example `cfclient`) and retry."
+            )
             print(f"URI: {args.uri}")
             controller._stop_motors()
             sys.exit(1)

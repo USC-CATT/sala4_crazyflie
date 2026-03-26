@@ -27,8 +27,8 @@ For the scalar velocity model with B = 1, this reduces to v* = -e_f.
 # time_s is relative to the start of the main control phase.
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
-    (0.0, 0.0, 0.0, 0.5, 0.0),
-    (8.0, 0.0, 0.0, 0.5, 0.0),
+    (0.0, 0.0, 0.0, 1.5, 0.0),
+    (4000.0, 0.0, 0.0, 1.5, 0.0),
 ]
 
 # Augmentation tuning.
@@ -37,17 +37,17 @@ USER_DEFINED_TRAJECTORY = [
 # usually more sensitive on hardware.
 AUG_ENABLE_XY = True
 AUG_ENABLE_Z = False
-AUG_START_TIME = 2.0 # Time after which augmentation starts applying (but the internal state is initialized from the measurements before that)
-AUG_RAMP_TIME = 2.0 # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
+AUG_START_TIME = 2.0  # Time after which augmentation starts applying (but the internal state is initialized from the measurements before that)
+AUG_RAMP_TIME = 2.0  # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
 AUG_MU_XY = 0.15
 AUG_MU_Z = 0.05
 
 # Safety limits for augmented outputs, used to prevent excessive correction
 AUG_V_LIMIT_Z = 4.0
-AUG_V_LIMIT_XY = .3
-AUG_MAX_ATTITUDE_DELTA_DEG = 10 # Max roll/pitch angle delta corresponding to the XY augmentation output, used to prevent excessive attitude correction from the augmentation
+AUG_V_LIMIT_XY = 0.3
+AUG_MAX_ATTITUDE_DELTA_DEG = 10  # Max roll/pitch angle delta corresponding to the XY augmentation output, used to prevent excessive attitude correction from the augmentation
 # max thrust is 65535
-AUG_MAX_THRUST_DELTA = 4000.0 # Max thrust delta corresponding to the Z augmentation output, used to prevent excessive thrust correction from the augmentation
+AUG_MAX_THRUST_DELTA = 4000.0  # Max thrust delta corresponding to the Z augmentation output, used to prevent excessive thrust correction from the augmentation
 AUG_DISABLE_IF_TILT_OVER_DEG = 35.0
 AUG_DISABLE_IF_SPEED_OVER_MPS = 2.0
 
@@ -60,6 +60,9 @@ import sys
 import time
 from dataclasses import dataclass
 from typing import Dict, Tuple
+from pynput import keyboard
+
+import numpy as np
 
 # Ensure local imports work no matter where the script is launched from.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -83,8 +86,7 @@ except ModuleNotFoundError as exc:
     raise
 
 from controller.attitude_controller import AttitudeController
-from controller.pid import constrain
-from controller.pid_types import (
+from controller.controller_types import (
     POSITION_RATE,
     AccData,
     Attitude,
@@ -102,9 +104,9 @@ from controller.pid_types import (
     Velocity,
     cap_angle,
 )
+from controller.pid import constrain
 from controller.position_controller import PositionController
 from motorRaw import MotorRaw
-
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -155,6 +157,7 @@ def _validate_trajectory() -> None:
         if waypoint.time_s < last_t:
             raise ValueError("Trajectory times must be non-decreasing")
         last_t = waypoint.time_s
+
 
 # Helper function to create a time axis for plotting based on the trajectory data and loop frequency.
 def _sample_trajectory(t_s: float) -> Tuple[float, float, float, float]:
@@ -323,8 +326,9 @@ class AugmentedCascadeController:
         }
 
     @staticmethod
-    
-    def _nominal_xy_input(roll_deg: float, pitch_deg: float, yaw_deg: float) -> Tuple[float, float]:
+    def _nominal_xy_input(
+        roll_deg: float, pitch_deg: float, yaw_deg: float
+    ) -> Tuple[float, float]:
         roll_rad = math.radians(roll_deg)
         pitch_rad = math.radians(pitch_deg)
         yaw_rad = math.radians(yaw_deg)
@@ -333,14 +337,24 @@ class AugmentedCascadeController:
         return ax, ay
 
     @staticmethod
-    def _attitude_delta_from_xy(v_aug_x: float, v_aug_y: float, yaw_deg: float) -> Tuple[float, float]:
+    def _attitude_delta_from_xy(
+        v_aug_x: float, v_aug_y: float, yaw_deg: float
+    ) -> Tuple[float, float]:
         yaw_rad = math.radians(yaw_deg)
-        d_roll_rad = (v_aug_x * math.sin(yaw_rad) - v_aug_y * math.cos(yaw_rad)) / GRAVITY
-        d_pitch_rad = (v_aug_x * math.cos(yaw_rad) + v_aug_y * math.sin(yaw_rad)) / GRAVITY
+        d_roll_rad = (
+            v_aug_x * math.sin(yaw_rad) - v_aug_y * math.cos(yaw_rad)
+        ) / GRAVITY
+        d_pitch_rad = (
+            v_aug_x * math.cos(yaw_rad) + v_aug_y * math.sin(yaw_rad)
+        ) / GRAVITY
         d_roll_deg = math.degrees(d_roll_rad)
         d_pitch_deg = math.degrees(d_pitch_rad)
-        d_roll_deg = constrain(d_roll_deg, -AUG_MAX_ATTITUDE_DELTA_DEG, AUG_MAX_ATTITUDE_DELTA_DEG)
-        d_pitch_deg = constrain(d_pitch_deg, -AUG_MAX_ATTITUDE_DELTA_DEG, AUG_MAX_ATTITUDE_DELTA_DEG)
+        d_roll_deg = constrain(
+            d_roll_deg, -AUG_MAX_ATTITUDE_DELTA_DEG, AUG_MAX_ATTITUDE_DELTA_DEG
+        )
+        d_pitch_deg = constrain(
+            d_pitch_deg, -AUG_MAX_ATTITUDE_DELTA_DEG, AUG_MAX_ATTITUDE_DELTA_DEG
+        )
         return d_roll_deg, d_pitch_deg
 
     def reset(self, state: State) -> None:
@@ -378,7 +392,9 @@ class AugmentedCascadeController:
         self.attitude_desired.yaw = cap_angle(self.attitude_desired.yaw)
 
         if update_outer:
-            thrust_nom, attitude_nom = self.position_controller.position_controller(setpoint, state)
+            thrust_nom, attitude_nom = self.position_controller.position_controller(
+                setpoint, state
+            )
             self.actuator_thrust = thrust_nom
 
             tilt_deg = max(abs(state.attitude.roll), abs(state.attitude.pitch))
@@ -439,7 +455,9 @@ class AugmentedCascadeController:
                     -AUG_MAX_THRUST_DELTA,
                     AUG_MAX_THRUST_DELTA,
                 )
-                self.actuator_thrust = constrain(thrust_nom + thrust_delta, 0.0, UINT16_MAX)
+                self.actuator_thrust = constrain(
+                    thrust_nom + thrust_delta, 0.0, UINT16_MAX
+                )
             else:
                 self.aug_z.reset(vel=state.velocity.z)
                 v_aug_z = 0.0
@@ -567,7 +585,7 @@ class HostAugmentedPWMPositionController:
         self.cf = Crazyflie(rw_cache="./cache")
         self.motor_raw = MotorRaw(crazyflie=self.cf)
 
-        self.log_state = LogConfig(name="HostAugState", period_in_ms=10)
+        self.log_state = LogConfig(name="HostAugState", period_in_ms=60)
         self.log_state.add_variable("stateEstimate.vx", "FP16")
         self.log_state.add_variable("stateEstimate.vy", "FP16")
         self.log_state.add_variable("stateEstimate.vz", "FP16")
@@ -577,18 +595,30 @@ class HostAugmentedPWMPositionController:
         self.log_state.add_variable("stateEstimate.x", "FP16")
         self.log_state.add_variable("stateEstimate.y", "FP16")
         self.log_state.add_variable("stateEstimate.z", "FP16")
-        self.log_state.add_variable("stateEstimate.roll", "FP16")
         self.log_state.add_variable("stateEstimate.pitch", "FP16")
+        self.log_state.add_variable("stateEstimate.roll", "FP16")
         self.log_state.add_variable("stateEstimate.yaw", "FP16")
-        self.log_state.add_variable("pm.vbat", "FP16")
 
-        self.log_sensor = LogConfig(name="HostAugSensor", period_in_ms=10)
+        self.log_sensor = LogConfig(name="HostAugSensor", period_in_ms=60)
         self.log_sensor.add_variable("gyro.x", "float")
         self.log_sensor.add_variable("gyro.y", "float")
         self.log_sensor.add_variable("gyro.z", "float")
         self.log_sensor.add_variable("acc.x", "float")
         self.log_sensor.add_variable("acc.y", "float")
         self.log_sensor.add_variable("acc.z", "float")
+        self.log_sensor.add_variable("pm.vbat", "FP16")
+        self.killed = False
+        
+        self.listener = keyboard.Listener(on_press=self.on_press)
+        self.listener.start()
+    def kill(self):
+        print("[KILLING DRONE]")
+        self.killed = True
+        self._stop_motors()
+
+    def on_press(self, key):
+        if key == keyboard.Key.space:
+            self.kill()
 
     def run(self):
         cflib.crtp.init_drivers()
@@ -622,8 +652,10 @@ class HostAugmentedPWMPositionController:
                 else:
                     self._control_for(duration_s=self.run_seconds)
 
-                if self.do_land:
-                    print(f"Landing target z={self.land_z:.2f} for {self.land_seconds:.1f}s")
+                if self.do_land and not self.killed:
+                    print(
+                        f"Landing target z={self.land_z:.2f} for {self.land_seconds:.1f}s"
+                    )
                     self.cf_setpoint.position.z = self.land_z
                     self._control_for(
                         duration_s=self.land_seconds, follow_script_trajectory=False
@@ -667,6 +699,8 @@ class HostAugmentedPWMPositionController:
         next_print = time.monotonic()
 
         while time.monotonic() < end:
+            if self.killed:
+                return
             now = time.monotonic()
             if follow_script_trajectory:
                 elapsed = now - phase_start
@@ -719,6 +753,8 @@ class HostAugmentedPWMPositionController:
                 next_print = time.monotonic() + 0.25
 
     def _control_step(self, sim_time: float):
+        if self.killed:
+            return
         control, _ = self.controller.step(
             setpoint=self.cf_setpoint,
             sensors=self.cf_sensors,
@@ -801,10 +837,18 @@ class HostAugmentedPWMPositionController:
             motor_thrust_bat_comp.motor_4,
         ]
         reduction = max(0.0, max(thrusts) - UINT16_MAX)
-        motor_thrust_pwm.motor_1 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_1 - reduction)
-        motor_thrust_pwm.motor_2 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_2 - reduction)
-        motor_thrust_pwm.motor_3 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_3 - reduction)
-        motor_thrust_pwm.motor_4 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_4 - reduction)
+        motor_thrust_pwm.motor_1 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_1 - reduction
+        )
+        motor_thrust_pwm.motor_2 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_2 - reduction
+        )
+        motor_thrust_pwm.motor_3 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_3 - reduction
+        )
+        motor_thrust_pwm.motor_4 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_4 - reduction
+        )
 
     def _stop_motors(self):
         end = time.monotonic() + 1.0
@@ -822,10 +866,11 @@ class HostAugmentedPWMPositionController:
         self.cf_state.acc.x = data["stateEstimate.ax"]
         self.cf_state.acc.y = data["stateEstimate.ay"]
         self.cf_state.acc.z = data["stateEstimate.az"]
-        self.cf_state.attitude.pitch = data["stateEstimate.pitch"]
+
         self.cf_state.attitude.roll = data["stateEstimate.roll"]
+        self.cf_state.attitude.pitch = data["stateEstimate.pitch"]
         self.cf_state.attitude.yaw = data["stateEstimate.yaw"]
-        self.cf_vbat = data["pm.vbat"]
+
         self._have_state = True
 
     def _log_sensor_callback(self, _timestamp, data, _logconf):
@@ -835,6 +880,7 @@ class HostAugmentedPWMPositionController:
         self.cf_sensors.acc.x = data["acc.x"]
         self.cf_sensors.acc.y = data["acc.y"]
         self.cf_sensors.acc.z = data["acc.z"]
+        self.cf_vbat = data["pm.vbat"]
         self._have_sensor = True
 
 
@@ -872,11 +918,20 @@ def parse_args():
         help="Desired yaw (deg), used when USE_SCRIPT_TRAJECTORY=False",
     )
     parser.add_argument(
-        "--run-seconds", type=float, default=5.0, help="Main control duration before landing"
+        "--run-seconds",
+        type=float,
+        default=5.0,
+        help="Main control duration before landing",
     )
-    parser.add_argument("--loop-hz", type=float, default=200.0, help="Host control loop rate")
-    parser.add_argument("--land-z", type=float, default=0.05, help="Landing target z (m)")
-    parser.add_argument("--land-seconds", type=float, default=3.0, help="Landing duration")
+    parser.add_argument(
+        "--loop-hz", type=float, default=200.0, help="Host control loop rate"
+    )
+    parser.add_argument(
+        "--land-z", type=float, default=0.05, help="Landing target z (m)"
+    )
+    parser.add_argument(
+        "--land-seconds", type=float, default=3.0, help="Landing duration"
+    )
     parser.add_argument(
         "--no-land",
         action="store_true",
@@ -909,7 +964,9 @@ def main():
         msg = str(exc)
         if "Resource busy" in msg or "Couldn't load link driver" in msg:
             print("Fatal error: Crazyradio is busy.")
-            print("Close other tools using the radio (for example `cfclient`) and retry.")
+            print(
+                "Close other tools using the radio (for example `cfclient`) and retry."
+            )
             print(f"URI: {args.uri}")
             controller._stop_motors()
             sys.exit(1)

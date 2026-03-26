@@ -8,7 +8,7 @@ import math
 import time
 
 from .controller_pid import ControllerPID
-from .pid_types import (
+from .controller_types import (
     AccData,
     Attitude,
     AttitudeRate,

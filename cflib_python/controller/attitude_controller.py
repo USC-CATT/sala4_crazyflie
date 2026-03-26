@@ -17,7 +17,7 @@ from .pid import (
     pid_set_integral_limit,
     pid_update,
 )
-from .pid_types import ATTITUDE_RATE
+from .controller_types import ATTITUDE_RATE
 
 
 class AttitudeController:

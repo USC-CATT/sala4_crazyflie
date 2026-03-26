@@ -18,7 +18,7 @@ from .pid import (
     pid_set_desired,
     pid_update,
 )
-from .pid_types import (
+from .controller_types import (
     POSITION_RATE,
     Attitude,
     Axis3f,

@@ -21,7 +21,7 @@ from cflib.positioning.motion_commander import MotionCommander
 from cflib.utils import uri_helper
 from cflib.utils.multiranger import Multiranger
 from controller.controller_pid import ControllerPID
-from controller.pid_types import (
+from controller.controller_types import (
     AccData,
     Attitude,
     AttitudeRate,
@@ -29,6 +29,7 @@ from controller.pid_types import (
     Control,
     GyroData,
     Position,
+    Quaternion,
     SensorData,
     Setpoint,
     SetpointMode,
@@ -85,6 +86,7 @@ class PWMMotorController:
         self.cf_state.velocity = Velocity(x=0.0, y=0.0, z=0.0)
         self.cf_state.acc = Axis3f(x=0.0, y=0.0, z=0.0)
         self.cf_state.attitude = Attitude(roll=0.0, pitch=0.0, yaw=0.0)
+        self.cf_state.attitude_quaternion = Quaternion(x=0.0, y=0.0, z=0.0, w=0.0)
 
         self.cf_sensors = SensorData()
         self.cf_sensors.gyro = GyroData(x=0.0, y=0.0, z=0.0)
@@ -110,8 +112,8 @@ class PWMMotorController:
 
         self.control = Control()
 
-        self.lg_state = LogConfig(name="State Estimator", period_in_ms=10)
-        self.lg_sensor = LogConfig(name="Sensor Values", period_in_ms=10)
+        self.lg_state = LogConfig(name="State Estimator", period_in_ms=60)
+        self.lg_sensor = LogConfig(name="Sensor Values", period_in_ms=60)
         # We use FP16 to fit more variables in a single log packet
         self.lg_state.add_variable("stateEstimate.vx", "FP16")
         self.lg_state.add_variable("stateEstimate.vy", "FP16")
@@ -122,10 +124,10 @@ class PWMMotorController:
         self.lg_state.add_variable("stateEstimate.x", "FP16")
         self.lg_state.add_variable("stateEstimate.y", "FP16")
         self.lg_state.add_variable("stateEstimate.z", "FP16")
-        self.lg_state.add_variable("stateEstimate.roll", "FP16")
-        self.lg_state.add_variable("stateEstimate.pitch", "FP16")
-        self.lg_state.add_variable("stateEstimate.yaw", "FP16")
-        self.lg_state.add_variable("pm.vbat", "FP16")
+        self.lg_state.add_variable("stateEstimate.qx", "FP16")
+        self.lg_state.add_variable("stateEstimate.qy", "FP16")
+        self.lg_state.add_variable("stateEstimate.qz", "FP16")
+        self.lg_state.add_variable("stateEstimate.qw", "FP16")
 
         self.lg_sensor.add_variable("gyro.x", "float")
         self.lg_sensor.add_variable("gyro.y", "float")
@@ -133,6 +135,7 @@ class PWMMotorController:
         self.lg_sensor.add_variable("acc.x", "float")
         self.lg_sensor.add_variable("acc.y", "float")
         self.lg_sensor.add_variable("acc.z", "float")
+        self.lg_sensor.add_variable("pm.vbat", "FP16")
 
         self.cf = Crazyflie(rw_cache="./cache")
         self.motorRaw = MotorRaw(crazyflie=self.cf)
@@ -337,10 +340,21 @@ class PWMMotorController:
         self.cf_state.acc.x = data["stateEstimate.ax"]
         self.cf_state.acc.y = data["stateEstimate.ay"]
         self.cf_state.acc.z = data["stateEstimate.az"]
-        self.cf_state.attitude.pitch = data["stateEstimate.pitch"]
-        self.cf_state.attitude.roll = data["stateEstimate.roll"]
-        self.cf_state.attitude.yaw = data["stateEstimate.yaw"]
-        self.cf_vbat = data["pm.vbat"]
+        qx = data["stateEstimate.qx"]
+        qy = data["stateEstimate.qy"]
+        qz = data["stateEstimate.qz"]
+        qw = data["stateEstimate.qw"]
+        self.cf_state.attitude_quaternion.x = qx
+        self.cf_state.attitude_quaternion.y = qy
+        self.cf_state.attitude_quaternion.z = qz
+        self.cf_state.attitude_quaternion.w = qw
+        roll = np.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy))
+        pitch = np.asin(2 * (qw * qy - qx * qz))
+        yaw = np.atan2(2 * (qw * qz + qy * qx), 1 - 2 * (qy * qy + qz * qz))
+        
+        self.cf_state.attitude.roll = np.degrees(roll)
+        self.cf_state.attitude.pitch = np.degrees(pitch)
+        self.cf_state.attitude.yaw = np.degrees(yaw)
 
     def log_sensor_callback(self, timestamp, data, logconf):
         self.cf_sensors.gyro.x = data["gyro.x"]
@@ -349,6 +363,7 @@ class PWMMotorController:
         self.cf_sensors.acc.x = data["acc.x"]
         self.cf_sensors.acc.y = data["acc.y"]
         self.cf_sensors.acc.z = data["acc.z"]
+        self.cf_vbat = data["pm.vbat"]
 
     def radioLinkStatistics(self, data):
         return

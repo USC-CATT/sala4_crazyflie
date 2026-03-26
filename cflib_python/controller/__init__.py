@@ -66,7 +66,7 @@ from .position_controller import (
     position_controller_reset_all_pid,
     velocity_controller,
 )
-from .pid_types import (
+from .controller_types import (
     ATTITUDE_RATE,
     POSITION_RATE,
     AccData,
