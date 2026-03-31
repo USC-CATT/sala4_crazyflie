@@ -12,8 +12,8 @@ and publishing motor commands on the raw motor CRTP port.
 # time_s is relative to the start of the main control phase.
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
-    (0.0, 0.0, 0.0, 1.5, 0.0),
-    (4000.0, 0.0, 0.0, 1.5, 0.0),
+    (0.0, 0.0, 0.0, 1.4, 0.0),
+    (4000.0, 0.0, 0.0, 1.4, 0.0),
 ]
 # after the last waypoint, there will be a default landing to z=0.05m in three seconds if --no-land is not specified, regardless of the last waypoint's z value
 

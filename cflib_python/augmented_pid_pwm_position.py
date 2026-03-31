@@ -27,8 +27,8 @@ For the scalar velocity model with B = 1, this reduces to v* = -e_f.
 # time_s is relative to the start of the main control phase.
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
-    (0.0, 0.0, 0.0, 1.5, 0.0),
-    (4000.0, 0.0, 0.0, 1.5, 0.0),
+    (0.0, 0.0, 0.0, 1.4, 0.0),
+    (4000.0, 0.0, 0.0, 1.4, 0.0),
 ]
 
 # Augmentation tuning.
@@ -36,14 +36,14 @@ USER_DEFINED_TRAJECTORY = [
 # Z augmentation is disabled by default since vertical thrust correction is
 # usually more sensitive on hardware.
 AUG_ENABLE_XY = True
-AUG_ENABLE_Z = False
+AUG_ENABLE_Z = True
 AUG_START_TIME = 2.0  # Time after which augmentation starts applying (but the internal state is initialized from the measurements before that)
 AUG_RAMP_TIME = 2.0  # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
 AUG_MU_XY = 0.15
 AUG_MU_Z = 0.05
 
 # Safety limits for augmented outputs, used to prevent excessive correction
-AUG_V_LIMIT_Z = 4.0
+AUG_V_LIMIT_Z = 0.3
 AUG_V_LIMIT_XY = 0.3
 AUG_MAX_ATTITUDE_DELTA_DEG = 10  # Max roll/pitch angle delta corresponding to the XY augmentation output, used to prevent excessive attitude correction from the augmentation
 # max thrust is 65535
@@ -60,9 +60,9 @@ import sys
 import time
 from dataclasses import dataclass
 from typing import Dict, Tuple
-from pynput import keyboard
 
 import numpy as np
+from pynput import keyboard
 
 # Ensure local imports work no matter where the script is launched from.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -608,9 +608,10 @@ class HostAugmentedPWMPositionController:
         self.log_sensor.add_variable("acc.z", "float")
         self.log_sensor.add_variable("pm.vbat", "FP16")
         self.killed = False
-        
+
         self.listener = keyboard.Listener(on_press=self.on_press)
         self.listener.start()
+
     def kill(self):
         print("[KILLING DRONE]")
         self.killed = True
