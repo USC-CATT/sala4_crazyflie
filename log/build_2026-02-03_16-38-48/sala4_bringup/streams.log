@@ -1,0 +1,33 @@
+[0.663s] Invoking command in '/home/catt/Desktop/sala4_crazyflie/sala4_bringup': PYTHONPATH=/home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/sala4_bringup build --build-base /home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/build install --record /home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/install.log --single-version-externally-managed install_data
+[0.850s] running egg_info
+[0.850s] creating ../build/sala4_bringup/sala4_bringup.egg-info
+[0.850s] writing ../build/sala4_bringup/sala4_bringup.egg-info/PKG-INFO
+[0.850s] writing dependency_links to ../build/sala4_bringup/sala4_bringup.egg-info/dependency_links.txt
+[0.851s] writing entry points to ../build/sala4_bringup/sala4_bringup.egg-info/entry_points.txt
+[0.851s] writing requirements to ../build/sala4_bringup/sala4_bringup.egg-info/requires.txt
+[0.851s] writing top-level names to ../build/sala4_bringup/sala4_bringup.egg-info/top_level.txt
+[0.851s] writing manifest file '../build/sala4_bringup/sala4_bringup.egg-info/SOURCES.txt'
+[0.851s] reading manifest file '../build/sala4_bringup/sala4_bringup.egg-info/SOURCES.txt'
+[0.851s] adding license file 'LICENSE'
+[0.852s] writing manifest file '../build/sala4_bringup/sala4_bringup.egg-info/SOURCES.txt'
+[0.852s] running build
+[0.852s] running install
+[0.852s] running install_data
+[0.852s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index
+[0.852s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index/resource_index
+[0.852s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index/resource_index/packages
+[0.852s] copying resource/sala4_bringup -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index/resource_index/packages
+[0.852s] copying package.xml -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup
+[0.852s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/launch
+[0.852s] copying launch/crazyflie_simulation.launch.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/launch
+[0.853s] copying launch/crazyflie_real.launch.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/launch
+[0.853s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+[0.853s] copying config/sim_mapping.rviz -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+[0.853s] copying config/crazyflie_real_crazyswarm2.yaml -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+[0.853s] copying config/real_mapping.rviz -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+[0.853s] running install_egg_info
+[0.855s] Copying ../build/sala4_bringup/sala4_bringup.egg-info to /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/lib/python3.10/site-packages/sala4_bringup-0.0.0-py3.10.egg-info
+[0.856s] running install_scripts
+[0.871s] Installing hello_world script to /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/lib/sala4_bringup
+[0.871s] writing list of installed files to '/home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/install.log'
+[0.896s] Invoked command in '/home/catt/Desktop/sala4_crazyflie/sala4_bringup' returned '0': PYTHONPATH=/home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/sala4_bringup build --build-base /home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/build install --record /home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/install.log --single-version-externally-managed install_data

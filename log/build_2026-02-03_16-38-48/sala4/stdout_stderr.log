@@ -1,0 +1,54 @@
+running egg_info
+creating ../build/sala4/sala4.egg-info
+writing ../build/sala4/sala4.egg-info/PKG-INFO
+writing dependency_links to ../build/sala4/sala4.egg-info/dependency_links.txt
+writing entry points to ../build/sala4/sala4.egg-info/entry_points.txt
+writing requirements to ../build/sala4/sala4.egg-info/requires.txt
+writing top-level names to ../build/sala4/sala4.egg-info/top_level.txt
+writing manifest file '../build/sala4/sala4.egg-info/SOURCES.txt'
+reading manifest file '../build/sala4/sala4.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../build/sala4/sala4.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/catt/Desktop/sala4_crazyflie/build/sala4/build
+creating /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib
+creating /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+copying sala4/arming.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+copying sala4/mapper_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+copying sala4/wall_following_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+copying sala4/waypoint_following.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+copying sala4/__init__.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+copying sala4/trajectory_following.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+running install
+running install_lib
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/arming.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/mapper_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/wall_following_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/waypoint_following.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/__init__.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/trajectory_following.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/arming.py to arming.cpython-310.pyc
+byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/mapper_multiranger.py to mapper_multiranger.cpython-310.pyc
+byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/wall_following_multiranger.py to wall_following_multiranger.cpython-310.pyc
+byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/waypoint_following.py to waypoint_following.cpython-310.pyc
+byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/trajectory_following.py to trajectory_following.cpython-310.pyc
+running install_data
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index/resource_index
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index/resource_index/packages
+copying resource/sala4 -> /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index/resource_index/packages
+copying package.xml -> /home/catt/Desktop/sala4_crazyflie/install/sala4/share/sala4
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/sala4/launch
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/sala4/config
+running install_egg_info
+Copying ../build/sala4/sala4.egg-info to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4-0.0.0-py3.10.egg-info
+running install_scripts
+Installing arming script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+Installing mapper_multiranger script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+Installing trajectory_following script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+Installing wall_following_multiranger script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+Installing waypoint_following script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+writing list of installed files to '/home/catt/Desktop/sala4_crazyflie/build/sala4/install.log'

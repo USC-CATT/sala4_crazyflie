@@ -1,0 +1,56 @@
+[0.670s] Invoking command in '/home/catt/Desktop/sala4_crazyflie/sala4': PYTHONPATH=/home/catt/Desktop/sala4_crazyflie/build/sala4/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/sala4 build --build-base /home/catt/Desktop/sala4_crazyflie/build/sala4/build install --record /home/catt/Desktop/sala4_crazyflie/build/sala4/install.log --single-version-externally-managed install_data
+[0.850s] running egg_info
+[0.850s] creating ../build/sala4/sala4.egg-info
+[0.851s] writing ../build/sala4/sala4.egg-info/PKG-INFO
+[0.851s] writing dependency_links to ../build/sala4/sala4.egg-info/dependency_links.txt
+[0.851s] writing entry points to ../build/sala4/sala4.egg-info/entry_points.txt
+[0.851s] writing requirements to ../build/sala4/sala4.egg-info/requires.txt
+[0.851s] writing top-level names to ../build/sala4/sala4.egg-info/top_level.txt
+[0.851s] writing manifest file '../build/sala4/sala4.egg-info/SOURCES.txt'
+[0.852s] reading manifest file '../build/sala4/sala4.egg-info/SOURCES.txt'
+[0.852s] adding license file 'LICENSE'
+[0.852s] writing manifest file '../build/sala4/sala4.egg-info/SOURCES.txt'
+[0.853s] running build
+[0.853s] running build_py
+[0.853s] creating /home/catt/Desktop/sala4_crazyflie/build/sala4/build
+[0.853s] creating /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib
+[0.853s] creating /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+[0.853s] copying sala4/arming.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+[0.853s] copying sala4/mapper_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+[0.853s] copying sala4/wall_following_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+[0.853s] copying sala4/waypoint_following.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+[0.853s] copying sala4/__init__.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+[0.853s] copying sala4/trajectory_following.py -> /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4
+[0.853s] running install
+[0.853s] running install_lib
+[0.854s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+[0.854s] copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/arming.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+[0.854s] copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/mapper_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+[0.854s] copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/wall_following_multiranger.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+[0.854s] copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/waypoint_following.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+[0.854s] copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/__init__.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+[0.854s] copying /home/catt/Desktop/sala4_crazyflie/build/sala4/build/lib/sala4/trajectory_following.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4
+[0.855s] byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/arming.py to arming.cpython-310.pyc
+[0.856s] byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/mapper_multiranger.py to mapper_multiranger.cpython-310.pyc
+[0.857s] byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/wall_following_multiranger.py to wall_following_multiranger.cpython-310.pyc
+[0.858s] byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/waypoint_following.py to waypoint_following.cpython-310.pyc
+[0.858s] byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/__init__.py to __init__.cpython-310.pyc
+[0.858s] byte-compiling /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4/trajectory_following.py to trajectory_following.cpython-310.pyc
+[0.858s] running install_data
+[0.858s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index
+[0.859s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index/resource_index
+[0.859s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index/resource_index/packages
+[0.859s] copying resource/sala4 -> /home/catt/Desktop/sala4_crazyflie/install/sala4/share/ament_index/resource_index/packages
+[0.859s] copying package.xml -> /home/catt/Desktop/sala4_crazyflie/install/sala4/share/sala4
+[0.859s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/sala4/launch
+[0.859s] creating /home/catt/Desktop/sala4_crazyflie/install/sala4/share/sala4/config
+[0.859s] running install_egg_info
+[0.860s] Copying ../build/sala4/sala4.egg-info to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages/sala4-0.0.0-py3.10.egg-info
+[0.861s] running install_scripts
+[0.875s] Installing arming script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+[0.876s] Installing mapper_multiranger script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+[0.876s] Installing trajectory_following script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+[0.876s] Installing wall_following_multiranger script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+[0.876s] Installing waypoint_following script to /home/catt/Desktop/sala4_crazyflie/install/sala4/lib/sala4
+[0.876s] writing list of installed files to '/home/catt/Desktop/sala4_crazyflie/build/sala4/install.log'
+[0.893s] Invoked command in '/home/catt/Desktop/sala4_crazyflie/sala4' returned '0': PYTHONPATH=/home/catt/Desktop/sala4_crazyflie/build/sala4/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/catt/Desktop/sala4_crazyflie/install/sala4/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/sala4 build --build-base /home/catt/Desktop/sala4_crazyflie/build/sala4/build install --record /home/catt/Desktop/sala4_crazyflie/build/sala4/install.log --single-version-externally-managed install_data

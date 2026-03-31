@@ -29,6 +29,7 @@ setup(
             "arming = sala4.arming:main",
             "waypoint_following = sala4.waypoint_following:main",
             "trajectory_following = sala4.trajectory_following:main",
+            "sala4_control_services = sala4.sala4_control_services:main",
         ],
     },
 )

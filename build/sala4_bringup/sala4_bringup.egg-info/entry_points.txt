@@ -1,0 +1,3 @@
+[console_scripts]
+hello_world = sala4_bringup.hello_world:main
+

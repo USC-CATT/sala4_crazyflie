@@ -1,0 +1,31 @@
+running egg_info
+creating ../build/sala4_bringup/sala4_bringup.egg-info
+writing ../build/sala4_bringup/sala4_bringup.egg-info/PKG-INFO
+writing dependency_links to ../build/sala4_bringup/sala4_bringup.egg-info/dependency_links.txt
+writing entry points to ../build/sala4_bringup/sala4_bringup.egg-info/entry_points.txt
+writing requirements to ../build/sala4_bringup/sala4_bringup.egg-info/requires.txt
+writing top-level names to ../build/sala4_bringup/sala4_bringup.egg-info/top_level.txt
+writing manifest file '../build/sala4_bringup/sala4_bringup.egg-info/SOURCES.txt'
+reading manifest file '../build/sala4_bringup/sala4_bringup.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../build/sala4_bringup/sala4_bringup.egg-info/SOURCES.txt'
+running build
+running install
+running install_data
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index/resource_index
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index/resource_index/packages
+copying resource/sala4_bringup -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/ament_index/resource_index/packages
+copying package.xml -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/launch
+copying launch/crazyflie_simulation.launch.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/launch
+copying launch/crazyflie_real.launch.py -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/launch
+creating /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+copying config/sim_mapping.rviz -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+copying config/crazyflie_real_crazyswarm2.yaml -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+copying config/real_mapping.rviz -> /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/share/sala4_bringup/config
+running install_egg_info
+Copying ../build/sala4_bringup/sala4_bringup.egg-info to /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/lib/python3.10/site-packages/sala4_bringup-0.0.0-py3.10.egg-info
+running install_scripts
+Installing hello_world script to /home/catt/Desktop/sala4_crazyflie/install/sala4_bringup/lib/sala4_bringup
+writing list of installed files to '/home/catt/Desktop/sala4_crazyflie/build/sala4_bringup/install.log'

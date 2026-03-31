@@ -1,0 +1,7 @@
+[console_scripts]
+arming = sala4.arming:main
+mapper_multiranger = sala4.mapper_multiranger:main
+trajectory_following = sala4.trajectory_following:main
+wall_following_multiranger = sala4.wall_following_multiranger:main
+waypoint_following = sala4.waypoint_following:main
+
