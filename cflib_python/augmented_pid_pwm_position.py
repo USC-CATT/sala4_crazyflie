@@ -123,6 +123,7 @@ VMOTOR2THRUST3 = 0.0020576974784587178
 IDLE_THRUST = 7000
 UINT16_MAX = 65535
 GRAVITY = 9.81
+REDUCE_MULTIPLIER = 0.8
 
 
 @dataclass(frozen=True)
@@ -611,6 +612,11 @@ class HostAugmentedPWMPositionController:
         self.log_sensor.add_variable("pm.vbat", "FP16")
         self.killed = False
 
+        self.m1_multiplier = 1.0
+        self.m2_multiplier = 1.0
+        self.m3_multiplier = 1.0
+        self.m4_multiplier = 1.0
+
         self.listener = keyboard.Listener(on_press=self.on_press)
         self.listener.start()
 
@@ -622,6 +628,14 @@ class HostAugmentedPWMPositionController:
     def on_press(self, key):
         if key == keyboard.Key.space:
             self.kill()
+        if key.char == "1":
+            self.m1_multiplier = REDUCE_MULTIPLIER
+        if key.char == "2":
+            self.m2_multiplier = REDUCE_MULTIPLIER
+        if key.char == "3":
+            self.m3_multiplier = REDUCE_MULTIPLIER
+        if key.char == "4":
+            self.m4_multiplier = REDUCE_MULTIPLIER
 
     def run(self):
         cflib.crtp.init_drivers()
@@ -773,10 +787,10 @@ class HostAugmentedPWMPositionController:
         self._power_distribution_cap(compensated, pwm)
 
         self.motor_raw.send_motor_raw(
-            int(pwm.motor_1),
-            int(pwm.motor_2),
-            int(pwm.motor_3),
-            int(pwm.motor_4),
+            int(pwm.motor_1 * self.m1_multiplier),
+            int(pwm.motor_2 * self.m2_multiplier),
+            int(pwm.motor_3 * self.m3_multiplier),
+            int(pwm.motor_4 * self.m4_multiplier),
         )
 
     def _power_distributor(self, control: Control, motor_thrust: MotorThrust):

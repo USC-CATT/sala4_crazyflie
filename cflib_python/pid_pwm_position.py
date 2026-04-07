@@ -252,6 +252,10 @@ class HostPIDPWMPositionController:
         self.log_sensor.add_variable("acc.z", "float")
         self.log_sensor.add_variable("pm.vbat", "FP16")
         self.killed = False
+        self.m1_multiplier = 1.0
+        self.m2_multiplier = 1.0
+        self.m3_multiplier = 1.0
+        self.m4_multiplier = 1.0
 
         self.listener = keyboard.Listener(on_press=self.on_press)
         self.listener.start()
@@ -264,6 +268,14 @@ class HostPIDPWMPositionController:
     def on_press(self, key):
         if key == keyboard.Key.space:
             self.kill()
+        if key.char == "1":
+            self.m1_multiplier = REDUCE_MULTIPLIER
+        if key.char == "2":
+            self.m2_multiplier = REDUCE_MULTIPLIER
+        if key.char == "3":
+            self.m3_multiplier = REDUCE_MULTIPLIER
+        if key.char == "4":
+            self.m4_multiplier = REDUCE_MULTIPLIER
 
     def run(self):
         cflib.crtp.init_drivers()
@@ -407,10 +419,10 @@ class HostPIDPWMPositionController:
         self._power_distribution_cap(compensated, pwm)
 
         self.motor_raw.send_motor_raw(
-            int(pwm.motor_1),
-            int(pwm.motor_2),
-            int(pwm.motor_3),
-            int(pwm.motor_4),
+            int(pwm.motor_1 * self.m1_multiplier),
+            int(pwm.motor_2 * self.m2_multiplier),
+            int(pwm.motor_3 * self.m3_multiplier),
+            int(pwm.motor_4 * self.m4_multiplier),
         )
 
     def _power_distributor(self, control: Control, motor_thrust: MotorThrust):
@@ -450,7 +462,8 @@ class HostPIDPWMPositionController:
 
         p = -VMOTOR2THRUST2 / (3.0 * VMOTOR2THRUST3)
         q = p * p * p + (
-            VMOTOR2THRUST2 * VMOTOR2THRUST1 - 3.0 * VMOTOR2THRUST3 * (VMOTOR2THRUST0 - thrust)
+            VMOTOR2THRUST2 * VMOTOR2THRUST1
+            - 3.0 * VMOTOR2THRUST3 * (VMOTOR2THRUST0 - thrust)
         ) / (6.0 * VMOTOR2THRUST3 * VMOTOR2THRUST3)
         r = VMOTOR2THRUST1 / (3.0 * VMOTOR2THRUST3)
         qrp = math.sqrt(q * q + (r - p * p) * (r - p * p) * (r - p * p))
@@ -473,10 +486,18 @@ class HostPIDPWMPositionController:
             motor_thrust_bat_comp.motor_4,
         ]
         reduction = max(0.0, max(thrusts) - UINT16_MAX)
-        motor_thrust_pwm.motor_1 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_1 - reduction)
-        motor_thrust_pwm.motor_2 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_2 - reduction)
-        motor_thrust_pwm.motor_3 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_3 - reduction)
-        motor_thrust_pwm.motor_4 = max(IDLE_THRUST, motor_thrust_bat_comp.motor_4 - reduction)
+        motor_thrust_pwm.motor_1 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_1 - reduction
+        )
+        motor_thrust_pwm.motor_2 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_2 - reduction
+        )
+        motor_thrust_pwm.motor_3 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_3 - reduction
+        )
+        motor_thrust_pwm.motor_4 = max(
+            IDLE_THRUST, motor_thrust_bat_comp.motor_4 - reduction
+        )
 
     def _stop_motors(self):
         end = time.monotonic() + 1.0
@@ -512,7 +533,7 @@ class HostPIDPWMPositionController:
         # self.cf_state.attitude.roll = np.degrees(rpy.x)
         # self.cf_state.attitude.pitch = np.degrees(rpy.y)
         # self.cf_state.attitude.yaw = np.degrees(rpy.z)
-        
+
         self._have_state = True
 
     def _log_sensor_callback(self, _timestamp, data, _logconf):
