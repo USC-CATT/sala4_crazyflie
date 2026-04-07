@@ -1,5 +1,7 @@
 import os
 
+import cflib.crtp
+import rclpy
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
@@ -11,7 +13,6 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Configure ROS nodes for launch
-
     # Setup project paths
     pkg_project_crazyflie_gazebo = get_package_share_directory(
         "ros_gz_crazyflie_bringup"
@@ -25,20 +26,25 @@ def generate_launch_description():
             )
         )
     )
-    
-    rviz_config_path = os.path.join(
-        get_package_share_directory("sala4_bringup"),
-        "config",
-        "sim_mapping.rviz",
-    )
+    # rviz_config_path = os.path.join(
+    #     get_package_share_directory("sala4_bringup"),
+    #     "config",
+    #     "sim_mapping.rviz",
+    # )
 
-    rviz = Node(
-        package="rviz2",
-        namespace="",
-        executable="rviz2",
-        name="rviz2",
-        arguments=["-d", rviz_config_path],
-        parameters=[{"use_sim_time": True}],
-    )
+    # rviz = Node(
+    #     package="rviz2",
+    #     namespace="",
+    #     executable="rviz2",
+    #     name="rviz2",
+    #     arguments=["-d", rviz_config_path],
+    #     parameters=[{"use_sim_time": True}],
+    # )
 
-    return LaunchDescription([crazyflie_simulation, rviz])
+    return LaunchDescription(
+        [
+            crazyflie_simulation,
+            # control,
+            # rviz
+        ]
+    )
