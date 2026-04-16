@@ -38,4 +38,14 @@
 ## Andrew's Log 03/31
 - changed motorRaw.py to create a ros2 topic that sends the 4 pwm from motorRaw.send_motor_raw()
 - next step is to interface with gazebo make it more disconnected by making two initalizations one original and the second just ros
-## 
+## Andrew's log 4/7/2026
+- Changed model.sdf so that it would at least subscribe to motor_speed and that we could change each motor individually
+- changed the ros_gz bridge and that made crazyflie/gazebo/command/motor_speed exist
+## Andrew's log 4/14/2026
+- downloaded quadcopter world and quadcopter1.sdf so that we can make motor speed work to make each motor spin
+- got rid of command/gazebo/twist on teh model.sdf and now motor_speed topic works
+- if you make changes to model.sdf in sala4_crazyflie you have ```cp ~/crazyflie/crazyflie-ros/ros2_ws/src/sala4_crazyflie/model/model.sdf ~/crazyflie/crazyflie-ros/simulation_ws/crazyflie-simulation/simulator_files/gazebo/crazyflie/model.sdf ```
+
+## Zach's Log 4/16/2026
+- copied `MotorRawNodeTest.py` over to `MotorRawNodeSineTest.py` to get a short demo of the drone taking off and landing
+- minimum value to get the drone to take off appears to be `58115` when using `motors.send_motor_raw()`.
