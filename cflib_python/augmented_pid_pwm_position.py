@@ -22,7 +22,7 @@ and the least-squares correction v* is computed from:
 For the scalar velocity model with B = 1, this reduces to v* = -e_f.
 """
 
-HOVER_HEIGHT = 1.1
+HOVER_HEIGHT = 1.5
 
 # User-editable trajectory block.
 # Each tuple is: (time_s, x_m, y_m, z_m, yaw_deg)
@@ -41,12 +41,12 @@ AUG_ENABLE_XY = True
 AUG_ENABLE_Z = True
 AUG_START_TIME = 2.0  # Time after which augmentation starts applying (but the internal state is initialized from the measurements before that)
 AUG_RAMP_TIME = 2.0  # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
-AUG_MU_XY = 0.15
-AUG_MU_Z = 0.05
+AUG_MU_XY = 0.01 #change back to 0.15
+AUG_MU_Z = 0.01 #change back to 0.05
 
 # Safety limits for augmented outputs, used to prevent excessive correction
-AUG_V_LIMIT_Z = 0.3
-AUG_V_LIMIT_XY = 0.5  # change this back to 0.3
+AUG_V_LIMIT_Z = 0.15 #change back to 0.3
+AUG_V_LIMIT_XY = 0.15  # change this back to 0.3
 AUG_MAX_ATTITUDE_DELTA_DEG = 10  # Max roll/pitch angle delta corresponding to the XY augmentation output, used to prevent excessive attitude correction from the augmentation
 # max thrust is 65535
 AUG_MAX_THRUST_DELTA = 4000.0  # Max thrust delta corresponding to the Z augmentation output, used to prevent excessive thrust correction from the augmentation

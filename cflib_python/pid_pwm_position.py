@@ -14,7 +14,12 @@ HOVER_HEIGHT = 1.1
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
     (0.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (4000.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
+    (2.0, 1.0, 0.0, HOVER_HEIGHT + 0.2, 0.0),
+    (4.0, -1.0, -1.0, HOVER_HEIGHT, 0.0),
+    (6.0, 0.5, 0.5, HOVER_HEIGHT, 0.0),
+    (8.0, 0.0, -0.5, HOVER_HEIGHT, 0.0),
+    (10.0, 0.5, -0.5, HOVER_HEIGHT, 0.0),
+    (20.0, 0.0, 0.0, 0.2, 0.0),
 ]
 # after the last waypoint, there will be a default landing to z=0.05m in three seconds if --no-land is not specified, regardless of the last waypoint's z value
 

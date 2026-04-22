@@ -1,0 +1,1 @@
+40cm string length
