@@ -34,7 +34,8 @@ def main():
         elif t < t2:
             u = int(m)
         else:
-            u = -A*w**2*m/g*math.cos(w*(t-t2)) + m
+            # u = -A*w**2*m/g*math.cos(w*(t-t2)) + m
+            u = -A*w**2*m/g*math.sin(2*w*(t-t2)) + m
             u = int(u)
 
         #u = A*math.exp(-(e*(t-10))**2)+m
