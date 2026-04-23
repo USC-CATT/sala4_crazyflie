@@ -35,6 +35,12 @@ def parse_args():
     parser.add_argument(
         "--cutoff", default=math.inf, help="Cutoff time of data", type=float
     )
+    parser.add_argument(
+        "--start", default=0, help="Start cutoff time of data", type=float
+    )
+    parser.add_argument(
+        "--offset", default=0, help="Time offset between two plots", type=float
+    )
     return parser.parse_args()
 
 
@@ -74,34 +80,52 @@ def main():
         with open(WAYPOINT_DATA_PATH, "r", encoding="utf-8") as file:
             data = json.load(file)
     t = []
+    pid_cutoff_start = 0
+    augmented_cutoff_start = 0
     if dual_graph:
-        t = _time_axis(pid_data, len(pid_data["position_x"]))
+        if args.offset < 0:
+            
+            t = _time_axis(pid_data, len(pid_data["position_x"]))
+        else:
+            t = _time_axis(augmented_data, len(augmented_data["position_x"]))
     else:
         t = _time_axis(data, len(data["position_x"]))
+    if dual_graph:
+        first_index = next((i for i, x in enumerate(t) if x > abs(args.offset)))
+        print(first_index)
+        t = t[first_index:]
+        t = np.array(t)
+        t = t - args.offset
+        if(args.offset < 0):
+            pid_cutoff_start = first_index
+        else:
+            augmented_cutoff_start = first_index
+    start_index = next((i for i, x in enumerate(t) if x > abs(args.start)))
+    print(start_index)
     cutoff_time = t[t <= args.cutoff]
     cutoff_length = min(len(t), args.cutoff)
     if dual_graph:
         cutoff_length = min(cutoff_length, len(augmented_data["position_x"]), len(pid_data["position_x"]))
-    cutoff_time = cutoff_time[:cutoff_length]
+    cutoff_time = cutoff_time[(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
     x = y = z = x_sp = y_sp = z_sp = x2 = y2 = z2 = []
     if dual_graph:
-        x = _smooth(pid_data["position_x"], SMOOTHING_WINDOW)[:cutoff_length]
-        y = _smooth(pid_data["position_y"], SMOOTHING_WINDOW)[:cutoff_length]
-        z = _smooth(pid_data["position_z"], SMOOTHING_WINDOW)[:cutoff_length]
-        x2 = _smooth(augmented_data["position_x"], SMOOTHING_WINDOW)[:cutoff_length]
-        y2 = _smooth(augmented_data["position_y"], SMOOTHING_WINDOW)[:cutoff_length]
-        z2 = _smooth(augmented_data["position_z"], SMOOTHING_WINDOW)[:cutoff_length]
-        x_sp = pid_data["setpoint_x"][:cutoff_length]
-        y_sp = pid_data["setpoint_y"][:cutoff_length]
-        z_sp = pid_data["setpoint_z"][:cutoff_length]
+        x = _smooth(pid_data["position_x"], SMOOTHING_WINDOW)[(pid_cutoff_start + start_index):cutoff_length - augmented_cutoff_start]
+        y = _smooth(pid_data["position_y"], SMOOTHING_WINDOW)[(pid_cutoff_start + start_index):cutoff_length - augmented_cutoff_start]
+        z = _smooth(pid_data["position_z"], SMOOTHING_WINDOW)[(pid_cutoff_start + start_index):cutoff_length - augmented_cutoff_start]
+        x2 = _smooth(augmented_data["position_x"], SMOOTHING_WINDOW)[(augmented_cutoff_start + start_index):cutoff_length - pid_cutoff_start]
+        y2 = _smooth(augmented_data["position_y"], SMOOTHING_WINDOW)[(augmented_cutoff_start + start_index):cutoff_length - pid_cutoff_start]
+        z2 = _smooth(augmented_data["position_z"], SMOOTHING_WINDOW)[(augmented_cutoff_start + start_index):cutoff_length - pid_cutoff_start]
+        x_sp = pid_data["setpoint_x"][(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
+        y_sp = pid_data["setpoint_y"][(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
+        z_sp = pid_data["setpoint_z"][(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
         pass
     else:
-        x = _smooth(data["position_x"], SMOOTHING_WINDOW)[:cutoff_length]
-        y = _smooth(data["position_y"], SMOOTHING_WINDOW)[:cutoff_length]
-        z = _smooth(data["position_z"], SMOOTHING_WINDOW)[:cutoff_length]
-        x_sp = data["setpoint_x"][:cutoff_length]
-        y_sp = data["setpoint_y"][:cutoff_length]
-        z_sp = data["setpoint_z"][:cutoff_length]
+        x = _smooth(data["position_x"], SMOOTHING_WINDOW)[start_index:cutoff_length]
+        y = _smooth(data["position_y"], SMOOTHING_WINDOW)[start_index:cutoff_length]
+        z = _smooth(data["position_z"], SMOOTHING_WINDOW)[start_index:cutoff_length]
+        x_sp = data["setpoint_x"][start_index:cutoff_length]
+        y_sp = data["setpoint_y"][start_index:cutoff_length]
+        z_sp = data["setpoint_z"][start_index:cutoff_length]
 
     fig = plt.figure(figsize=(14, 10))
 
