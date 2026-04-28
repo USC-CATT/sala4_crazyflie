@@ -103,10 +103,12 @@ def main():
     start_index = next((i for i, x in enumerate(t) if x > abs(args.start)))
     print(start_index)
     cutoff_time = t[t <= args.cutoff]
-    cutoff_length = min(len(t), args.cutoff)
+    cutoff_length = len(cutoff_time)
+    print(cutoff_length)
     if dual_graph:
         cutoff_length = min(cutoff_length, len(augmented_data["position_x"]), len(pid_data["position_x"]))
     cutoff_time = cutoff_time[(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
+    print(len(cutoff_time), cutoff_length)
     x = y = z = x_sp = y_sp = z_sp = x2 = y2 = z2 = []
     if dual_graph:
         x = _smooth(pid_data["position_x"], SMOOTHING_WINDOW)[(pid_cutoff_start + start_index):cutoff_length - augmented_cutoff_start]

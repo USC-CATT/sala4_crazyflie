@@ -6,7 +6,7 @@ This bypasses the firmware flight controller by enabling `motorPowerSet.enable`
 and publishing motor commands on the raw motor CRTP port.
 """
 
-HOVER_HEIGHT = 1.1
+HOVER_HEIGHT = 1
 # User-editable trajectory block.
 # Edit this list directly to define the desired path.
 # Each tuple is: (time_s, x_m, y_m, z_m, yaw_deg)
@@ -14,12 +14,7 @@ HOVER_HEIGHT = 1.1
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
     (0.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (2.0, 1.0, 0.0, HOVER_HEIGHT + 0.2, 0.0),
-    (4.0, -1.0, -1.0, HOVER_HEIGHT, 0.0),
-    (6.0, 0.5, 0.5, HOVER_HEIGHT, 0.0),
-    (8.0, 0.0, -0.5, HOVER_HEIGHT, 0.0),
-    (10.0, 0.5, -0.5, HOVER_HEIGHT, 0.0),
-    (20.0, 0.0, 0.0, 0.2, 0.0),
+    (2000.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
 ]
 # after the last waypoint, there will be a default landing to z=0.05m in three seconds if --no-land is not specified, regardless of the last waypoint's z value
 
@@ -89,6 +84,8 @@ VMOTOR2THRUST3 = 0.0020576974784587178
 
 IDLE_THRUST = 7000
 UINT16_MAX = 65535
+REDUCE_MULTIPLIER = 0.75
+FAILURE_TIME = 6.0
 
 
 @dataclass(frozen=True)
@@ -187,6 +184,7 @@ class HostPIDPWMPositionController:
         self.land_seconds = land_seconds
         self.do_land = do_land
         self._log_time_origin = None
+        self.has_failed = False
 
         json_data["loop_hz"] = self.loop_hz
         json_data["sample_period_s"] = self.loop_period
@@ -378,6 +376,11 @@ class HostPIDPWMPositionController:
             json_data["setpoint_y"].append(self.cf_setpoint.position.y)
             json_data["position_z"].append(self.cf_state.position.z)
             json_data["setpoint_z"].append(self.cf_setpoint.position.z)
+            if now - self._log_time_origin > FAILURE_TIME and self.has_failed is False:
+                print("FAILING MOTOR")
+                self.has_failed = True
+                self.m1_multiplier = REDUCE_MULTIPLIER
+                self.m2_multiplier = REDUCE_MULTIPLIER
 
             self._control_step()
             next_tick += self.loop_period

@@ -22,7 +22,7 @@ and the least-squares correction v* is computed from:
 For the scalar velocity model with B = 1, this reduces to v* = -e_f.
 """
 
-HOVER_HEIGHT = 1.5
+HOVER_HEIGHT = 1
 
 # User-editable trajectory block.
 # Each tuple is: (time_s, x_m, y_m, z_m, yaw_deg)
@@ -41,12 +41,12 @@ AUG_ENABLE_XY = True
 AUG_ENABLE_Z = True
 AUG_START_TIME = 2.0  # Time after which augmentation starts applying (but the internal state is initialized from the measurements before that)
 AUG_RAMP_TIME = 2.0  # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
-AUG_MU_XY = 0.01 #change back to 0.15
-AUG_MU_Z = 0.01 #change back to 0.05
+AUG_MU_XY = 0.05  # change back to 0.15
+AUG_MU_Z = 0.1  # change back to 0.05
 
 # Safety limits for augmented outputs, used to prevent excessive correction
-AUG_V_LIMIT_Z = 0.15 #change back to 0.3
-AUG_V_LIMIT_XY = 0.15  # change this back to 0.3
+AUG_V_LIMIT_Z = 0.3  # change back to 0.3
+AUG_V_LIMIT_XY = 0.3  # change this back to 0.3
 AUG_MAX_ATTITUDE_DELTA_DEG = 10  # Max roll/pitch angle delta corresponding to the XY augmentation output, used to prevent excessive attitude correction from the augmentation
 # max thrust is 65535
 AUG_MAX_THRUST_DELTA = 4000.0  # Max thrust delta corresponding to the Z augmentation output, used to prevent excessive thrust correction from the augmentation
@@ -123,7 +123,8 @@ VMOTOR2THRUST3 = 0.0020576974784587178
 IDLE_THRUST = 7000
 UINT16_MAX = 65535
 GRAVITY = 9.81
-REDUCE_MULTIPLIER = 0.8
+REDUCE_MULTIPLIER = 0.75
+FAILURE_TIME=6.0
 
 
 @dataclass(frozen=True)
@@ -548,6 +549,7 @@ class HostAugmentedPWMPositionController:
         self.do_land = do_land
         self._log_time_origin = None
         self.controller_time_origin = 0.0
+        self.has_failed = False
 
         json_data["loop_hz"] = self.loop_hz
         json_data["sample_period_s"] = self.loop_period
@@ -785,6 +787,12 @@ class HostAugmentedPWMPositionController:
         self._battery_compensator(raw, compensated)
         pwm = MotorThrust()
         self._power_distribution_cap(compensated, pwm)
+        
+        if sim_time > FAILURE_TIME and self.has_failed is False:
+            self.has_failed = True
+            print("FAILING MOTOR")
+            self.m1_multiplier = REDUCE_MULTIPLIER
+            self.m2_multiplier = REDUCE_MULTIPLIER
 
         self.motor_raw.send_motor_raw(
             int(pwm.motor_1 * self.m1_multiplier),

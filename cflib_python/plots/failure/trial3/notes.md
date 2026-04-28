@@ -1,0 +1,1 @@
+cutting off motors 1 and 2 by 25%
