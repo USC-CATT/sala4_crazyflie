@@ -1,0 +1,2 @@
+AUG_MU_XY = .05
+AUG_MU_Z  = .05

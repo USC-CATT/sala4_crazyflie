@@ -23,14 +23,15 @@ For the scalar velocity model with B = 1, this reduces to v* = -e_f.
 """
 
 HOVER_HEIGHT = 1
-
 # User-editable trajectory block.
+# Edit this list directly to define the desired path.
 # Each tuple is: (time_s, x_m, y_m, z_m, yaw_deg)
 # time_s is relative to the start of the main control phase.
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
     (0.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (4000.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
+    (12.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
+    (14.0, 0.0, 0.0, .025, 0.0),
 ]
 
 # Augmentation tuning.
@@ -41,8 +42,10 @@ AUG_ENABLE_XY = True
 AUG_ENABLE_Z = True
 AUG_START_TIME = 2.0  # Time after which augmentation starts applying (but the internal state is initialized from the measurements before that)
 AUG_RAMP_TIME = 2.0  # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
-AUG_MU_XY = 0.05  # change back to 0.15
-AUG_MU_Z = 0.1  # change back to 0.05
+# B: 0.05 T2: 0.15 T3: 0.01 T4: 0.35  T5: 1.0
+# B: 0.1  T2: 0.25 T3: 0.05 T4: 0.65 T5: 1.0
+AUG_MU_XY = .05
+AUG_MU_Z  = .05
 
 # Safety limits for augmented outputs, used to prevent excessive correction
 AUG_V_LIMIT_Z = 0.3  # change back to 0.3
@@ -123,8 +126,8 @@ VMOTOR2THRUST3 = 0.0020576974784587178
 IDLE_THRUST = 7000
 UINT16_MAX = 65535
 GRAVITY = 9.81
-REDUCE_MULTIPLIER = 0.75
-FAILURE_TIME=6.0
+REDUCE_MULTIPLIER = 0.65
+FAILURE_TIME=4.25
 
 
 @dataclass(frozen=True)
@@ -791,7 +794,7 @@ class HostAugmentedPWMPositionController:
         if sim_time > FAILURE_TIME and self.has_failed is False:
             self.has_failed = True
             print("FAILING MOTOR")
-            self.m1_multiplier = REDUCE_MULTIPLIER
+            # self.m1_multiplier = REDUCE_MULTIPLIER
             self.m2_multiplier = REDUCE_MULTIPLIER
 
         self.motor_raw.send_motor_raw(
