@@ -31,7 +31,7 @@ USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
     (0.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
     (12.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (14.0, 0.0, 0.0, .025, 0.0),
+    (14.0, 0.0, 0.0, 0.025, 0.0),
 ]
 
 # Augmentation tuning.
@@ -44,8 +44,8 @@ AUG_START_TIME = 2.0  # Time after which augmentation starts applying (but the i
 AUG_RAMP_TIME = 2.0  # Time over which the augmentation output is ramped up to its full value after AUG_START_TIME
 # B: 0.05 T2: 0.15 T3: 0.01 T4: 0.35  T5: 1.0
 # B: 0.1  T2: 0.25 T3: 0.05 T4: 0.65 T5: 1.0
-AUG_MU_XY = .05
-AUG_MU_Z  = .05
+AUG_MU_XY = 0.05
+AUG_MU_Z = 0.05
 
 # Safety limits for augmented outputs, used to prevent excessive correction
 AUG_V_LIMIT_Z = 0.3  # change back to 0.3
@@ -127,7 +127,7 @@ IDLE_THRUST = 7000
 UINT16_MAX = 65535
 GRAVITY = 9.81
 REDUCE_MULTIPLIER = 0.65
-FAILURE_TIME=4.25
+FAILURE_TIME = 4.25
 
 
 @dataclass(frozen=True)
@@ -790,12 +790,12 @@ class HostAugmentedPWMPositionController:
         self._battery_compensator(raw, compensated)
         pwm = MotorThrust()
         self._power_distribution_cap(compensated, pwm)
-        
+
         if sim_time > FAILURE_TIME and self.has_failed is False:
             self.has_failed = True
             print("FAILING MOTOR")
-            # self.m1_multiplier = REDUCE_MULTIPLIER
-            self.m2_multiplier = REDUCE_MULTIPLIER
+            self.m1_multiplier = REDUCE_MULTIPLIER
+            # self.m2_multiplier = REDUCE_MULTIPLIER
 
         self.motor_raw.send_motor_raw(
             int(pwm.motor_1 * self.m1_multiplier),
