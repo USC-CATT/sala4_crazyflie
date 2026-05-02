@@ -15,7 +15,7 @@ USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
     (0.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
     (12.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (14.0, 0.0, 0.0, .025, 0.0),
+    (14.0, 0.0, 0.0, 0.025, 0.0),
 ]
 # after the last waypoint, there will be a default landing to z=0.05m in three seconds if --no-land is not specified, regardless of the last waypoint's z value
 
@@ -86,7 +86,7 @@ VMOTOR2THRUST3 = 0.0020576974784587178
 IDLE_THRUST = 7000
 UINT16_MAX = 65535
 REDUCE_MULTIPLIER = 0.65
-FAILURE_TIME=4.25
+FAILURE_TIME = 4.25
 
 
 @dataclass(frozen=True)
@@ -380,8 +380,8 @@ class HostPIDPWMPositionController:
             if now - self._log_time_origin > FAILURE_TIME and self.has_failed is False:
                 print("FAILING MOTOR")
                 self.has_failed = True
-                # self.m1_multiplier = REDUCE_MULTIPLIER
-                self.m2_multiplier = REDUCE_MULTIPLIER
+                self.m1_multiplier = REDUCE_MULTIPLIER
+                # self.m2_multiplier = REDUCE_MULTIPLIER
 
             self._control_step()
             next_tick += self.loop_period
