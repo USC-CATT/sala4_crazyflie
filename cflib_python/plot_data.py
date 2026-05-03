@@ -49,7 +49,7 @@ def _smooth(values, window):
     if window <= 1:
         return np.asarray(values, dtype=float)
     kernel = np.ones((window,), dtype=float) / float(window)
-    
+
     return np.convolve(values, kernel, mode="same")
 
 
@@ -84,7 +84,6 @@ def main():
     augmented_cutoff_start = 0
     if dual_graph:
         if args.offset < 0:
-            
             t = _time_axis(pid_data, len(pid_data["position_x"]))
         else:
             t = _time_axis(augmented_data, len(augmented_data["position_x"]))
@@ -96,7 +95,7 @@ def main():
         t = t[first_index:]
         t = np.array(t)
         t = t - args.offset
-        if(args.offset < 0):
+        if args.offset < 0:
             pid_cutoff_start = first_index
         else:
             augmented_cutoff_start = first_index
@@ -106,20 +105,50 @@ def main():
     cutoff_length = len(cutoff_time)
     print(cutoff_length)
     if dual_graph:
-        cutoff_length = min(cutoff_length, len(augmented_data["position_x"]), len(pid_data["position_x"]))
-    cutoff_time = cutoff_time[(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
+        cutoff_length = min(
+            cutoff_length,
+            len(augmented_data["position_x"]),
+            len(pid_data["position_x"]),
+        )
+    cutoff_time = cutoff_time[
+        (max(pid_cutoff_start, augmented_cutoff_start) + start_index) : cutoff_length
+    ]
     print(len(cutoff_time), cutoff_length)
     x = y = z = x_sp = y_sp = z_sp = x2 = y2 = z2 = []
     if dual_graph:
-        x = _smooth(pid_data["position_x"], SMOOTHING_WINDOW)[(pid_cutoff_start + start_index):cutoff_length - augmented_cutoff_start]
-        y = _smooth(pid_data["position_y"], SMOOTHING_WINDOW)[(pid_cutoff_start + start_index):cutoff_length - augmented_cutoff_start]
-        z = _smooth(pid_data["position_z"], SMOOTHING_WINDOW)[(pid_cutoff_start + start_index):cutoff_length - augmented_cutoff_start]
-        x2 = _smooth(augmented_data["position_x"], SMOOTHING_WINDOW)[(augmented_cutoff_start + start_index):cutoff_length - pid_cutoff_start]
-        y2 = _smooth(augmented_data["position_y"], SMOOTHING_WINDOW)[(augmented_cutoff_start + start_index):cutoff_length - pid_cutoff_start]
-        z2 = _smooth(augmented_data["position_z"], SMOOTHING_WINDOW)[(augmented_cutoff_start + start_index):cutoff_length - pid_cutoff_start]
-        x_sp = pid_data["setpoint_x"][(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
-        y_sp = pid_data["setpoint_y"][(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
-        z_sp = pid_data["setpoint_z"][(max(pid_cutoff_start, augmented_cutoff_start) + start_index):cutoff_length]
+        x = _smooth(pid_data["position_x"], SMOOTHING_WINDOW)[
+            (pid_cutoff_start + start_index) : cutoff_length - augmented_cutoff_start
+        ]
+        y = _smooth(pid_data["position_y"], SMOOTHING_WINDOW)[
+            (pid_cutoff_start + start_index) : cutoff_length - augmented_cutoff_start
+        ]
+        z = _smooth(pid_data["position_z"], SMOOTHING_WINDOW)[
+            (pid_cutoff_start + start_index) : cutoff_length - augmented_cutoff_start
+        ]
+        x2 = _smooth(augmented_data["position_x"], SMOOTHING_WINDOW)[
+            (augmented_cutoff_start + start_index) : cutoff_length - pid_cutoff_start
+        ]
+        y2 = _smooth(augmented_data["position_y"], SMOOTHING_WINDOW)[
+            (augmented_cutoff_start + start_index) : cutoff_length - pid_cutoff_start
+        ]
+        z2 = _smooth(augmented_data["position_z"], SMOOTHING_WINDOW)[
+            (augmented_cutoff_start + start_index) : cutoff_length - pid_cutoff_start
+        ]
+        x_sp = pid_data["setpoint_x"][
+            (
+                max(pid_cutoff_start, augmented_cutoff_start) + start_index
+            ) : cutoff_length
+        ]
+        y_sp = pid_data["setpoint_y"][
+            (
+                max(pid_cutoff_start, augmented_cutoff_start) + start_index
+            ) : cutoff_length
+        ]
+        z_sp = pid_data["setpoint_z"][
+            (
+                max(pid_cutoff_start, augmented_cutoff_start) + start_index
+            ) : cutoff_length
+        ]
         pass
     else:
         x = _smooth(data["position_x"], SMOOTHING_WINDOW)[start_index:cutoff_length]
@@ -196,4 +225,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-`1`, `2`, `3` and `4` all
+# `1`, `2`, `3` and `4` all

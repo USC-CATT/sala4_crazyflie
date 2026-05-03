@@ -48,8 +48,8 @@ AUG_MU_XY = 0.05
 AUG_MU_Z = 0.05
 
 # Safety limits for augmented outputs, used to prevent excessive correction
-AUG_V_LIMIT_Z = 0.3  # change back to 0.3
-AUG_V_LIMIT_XY = 0.3  # change this back to 0.3
+AUG_V_LIMIT_Z = 1  # change back to 0.3
+AUG_V_LIMIT_XY = 1  # change this back to 0.3
 AUG_MAX_ATTITUDE_DELTA_DEG = 10  # Max roll/pitch angle delta corresponding to the XY augmentation output, used to prevent excessive attitude correction from the augmentation
 # max thrust is 65535
 AUG_MAX_THRUST_DELTA = 4000.0  # Max thrust delta corresponding to the Z augmentation output, used to prevent excessive thrust correction from the augmentation
