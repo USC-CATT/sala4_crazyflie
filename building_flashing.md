@@ -8,4 +8,4 @@ To flash the firmware to the crazyflie drone, ensure that the drone is turned ON
 
 Then, in `crazyflie-firmware`, run the following command:
 
-```cfloader flash build/cf21bl.bin stm32-fw -w radio://0/80/2M/E7E7E7E7E7```
+```cfloader flash build/cf21bl.bin stm32-fw -w radio://0/80/2M/E7E7E7E70X``` where X is the drones number
