@@ -49,3 +49,29 @@
 ## Zach's Log 4/16/2026
 - copied `MotorRawNodeTest.py` over to `MotorRawNodeSineTest.py` to get a short demo of the drone taking off and landing
 - minimum value to get the drone to take off appears to be `58115` when using `motors.send_motor_raw()`.
+
+## Andrew's Log 7/20/2026
+- looking at how plotting works it seems that `waypoint_data.json` is created by the `waypoint_logging.py` that is using a logger from cffirmware that json file is then transformed with `plot_data.py`
+- to make a comparsion we must then create a simular `json` file to `waypoint_data.json`
+- so would have to make a logger for the simulation that creates that `json` either by highjacking the existing file or creating a new one
+
+## Andrew's Log 7/21/2026
+- looking into how to make the platform and how to make a robot in gazebo this [link](https://gazebosim.org/docs/latest/library_howtos/) is start of making a robot but shows a car not something with pistons that we would need
+- although this [youtube link](https://www.youtube.com/watch?v=wnerg4OZ1HI) shows it is possible
+- want to make a stewart platform which can give us 6 degrees of freedom which may be a lot for us so other options can be explored
+- [ssh key authorization tutorial](https://code.visualstudio.com/docs/remote/troubleshooting#_configuring-key-based-authentication)
+
+## Andrew's Log 7/22/2026
+- github for stewart platform [link](https://github.com/HadiYd/stewart_platform_learning/tree/main/src/stewart_platform)
+
+## Andrew's log 8/5/2026
+- tried `-s` tag in `crazyflie_simulation.launch.py` in the worlds command as well as `--headless-rendering` worked on 7/29/2026 but broke for some reason
+- installed `nvidia-driver-470-server` this is a special driver to maybe fix headless rendering for ubuntu servers [source](https://github.com/google-deepmind/dm_control/issues/214) <- this did not work
+- notes for gazebo topic `gz topic -l` is for the list of topics in the gazebo `gz` is main command line for gazebo
+- added `prelaunch_ros.sh` option -s for headless rendering
+- `source ~/.bashrc` so for changes to the bashrc
+- changed `~/.bashrc` to auto prelaunch ros and make it so that primary rendering is nvidia
+- all this work for nothing because all the versions are incompatable and stuff so no x11 forwarding but
+- run like normal first??? then do headless maybe it makes it work it just worked an I feel like i did nothing but okay
+- ROS2 Notes for getting the type a ros2 topic is `ros2 topic info /crazyflie/odom` 
+- to get the output and template for the
