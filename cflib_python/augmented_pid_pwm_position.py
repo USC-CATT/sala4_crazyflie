@@ -22,7 +22,7 @@ and the least-squares correction v* is computed from:
 For the scalar velocity model with B = 1, this reduces to v* = -e_f.
 """
 
-HOVER_HEIGHT = 1
+HOVER_HEIGHT = .85
 # User-editable trajectory block.
 # Edit this list directly to define the desired path.
 # Each tuple is: (time_s, x_m, y_m, z_m, yaw_deg)
@@ -30,8 +30,8 @@ HOVER_HEIGHT = 1
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
     (0.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (12.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (14.0, 0.0, 0.0, 0.025, 0.0),
+    (8.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
+    (10.0, 0.0, 0.0, 0.025, 0.0),
 ]
 
 # Augmentation tuning.
@@ -67,7 +67,14 @@ from dataclasses import dataclass
 from typing import Dict, Tuple
 
 import numpy as np
-from pynput import keyboard
+
+try:
+    from pynput import keyboard
+except Exception as exc:  # Keyboard shortcuts are useful, but not required to fly.
+    keyboard = None
+    KEYBOARD_IMPORT_ERROR = exc
+else:
+    KEYBOARD_IMPORT_ERROR = None
 
 # Ensure local imports work no matter where the script is launched from.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -127,7 +134,7 @@ IDLE_THRUST = 7000
 UINT16_MAX = 65535
 GRAVITY = 9.81
 REDUCE_MULTIPLIER = 0.65
-FAILURE_TIME = 4.25
+FAILURE_TIME = 100.25
 
 
 @dataclass(frozen=True)
@@ -622,8 +629,15 @@ class HostAugmentedPWMPositionController:
         self.m3_multiplier = 1.0
         self.m4_multiplier = 1.0
 
-        self.listener = keyboard.Listener(on_press=self.on_press)
-        self.listener.start()
+        self.listener = None
+        if keyboard is None:
+            print(f"Keyboard shortcuts disabled: {KEYBOARD_IMPORT_ERROR}")
+        else:
+            try:
+                self.listener = keyboard.Listener(on_press=self.on_press)
+                self.listener.start()
+            except Exception as exc:
+                print(f"Keyboard shortcuts disabled: {exc}")
 
     def kill(self):
         print("[KILLING DRONE]")
@@ -633,13 +647,16 @@ class HostAugmentedPWMPositionController:
     def on_press(self, key):
         if key == keyboard.Key.space:
             self.kill()
-        if key.char == "1":
+            return
+
+        key_char = getattr(key, "char", None)
+        if key_char == "1":
             self.m1_multiplier = REDUCE_MULTIPLIER
-        if key.char == "2":
+        if key_char == "2":
             self.m2_multiplier = REDUCE_MULTIPLIER
-        if key.char == "3":
+        if key_char == "3":
             self.m3_multiplier = REDUCE_MULTIPLIER
-        if key.char == "4":
+        if key_char == "4":
             self.m4_multiplier = REDUCE_MULTIPLIER
 
     def run(self):
@@ -913,6 +930,31 @@ class HostAugmentedPWMPositionController:
 
 
 def parse_args():
+    def validate_uri(uri: str) -> str:
+        if not uri.startswith("radio://"):
+            return uri
+
+        parts = uri.split("/")
+        address = parts[-1]
+        if address.lower().startswith("0x"):
+            address = address[2:]
+            parts[-1] = address
+            uri = "/".join(parts)
+
+        if len(address) != 10:
+            raise argparse.ArgumentTypeError(
+                "Crazyflie radio address must be exactly 5 bytes / 10 hex "
+                f"characters; got {address!r}."
+            )
+        try:
+            int(address, 16)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(
+                f"Crazyflie radio address must be hexadecimal; got {address!r}."
+            ) from exc
+
+        return uri
+
     parser = argparse.ArgumentParser(
         description="Host-side augmented cascaded PID with raw motor PWM output."
     )
@@ -965,7 +1007,12 @@ def parse_args():
         action="store_true",
         help="Skip landing phase and stop motors directly after run phase",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    try:
+        args.uri = validate_uri(args.uri)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
+    return args
 
 
 def main():
@@ -990,11 +1037,16 @@ def main():
         sys.exit(130)
     except Exception as exc:
         msg = str(exc)
-        if "Resource busy" in msg or "Couldn't load link driver" in msg:
+        if "Resource busy" in msg:
             print("Fatal error: Crazyradio is busy.")
             print(
                 "Close other tools using the radio (for example `cfclient`) and retry."
             )
+            print(f"URI: {args.uri}")
+            controller._stop_motors()
+            sys.exit(1)
+        if "Couldn't load link driver" in msg:
+            print(f"Fatal error: {exc}")
             print(f"URI: {args.uri}")
             controller._stop_motors()
             sys.exit(1)

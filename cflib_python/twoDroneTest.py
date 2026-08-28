@@ -16,7 +16,7 @@ from cflib.utils import uri_helper
 from cflib.utils.multiranger import Multiranger
 from motorRaw import MotorRaw
 
-URI = uri_helper.uri_from_env(default="radio://0/80/2M/E7E7E7E701")
+URI = uri_helper.uri_from_env(default="radio://0/80/2M/E7E7E7E702")
 URI2 = uri_helper.uri_from_env(default="radio://0/80/2M/E7E7E7E702")
 
 if len(sys.argv) > 1:
