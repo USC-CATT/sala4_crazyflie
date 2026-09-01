@@ -14,8 +14,10 @@ HOVER_HEIGHT = .85
 USE_SCRIPT_TRAJECTORY = True
 USER_DEFINED_TRAJECTORY = [
     (0.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (8.0, 0.0, 0.0, HOVER_HEIGHT, 0.0),
-    (10.0, 0.0, 0.0, 0.025, 0.0),
+    (2.0, 1.0, 0.0, HOVER_HEIGHT, 40.0),
+    (4.0, 0.0, 1.0, HOVER_HEIGHT, 0.0),
+    (6.0, 0.0, -1.0, HOVER_HEIGHT, -40.0),
+    (8.0, 0.0, 0.0, 0.025, 0.0),
 ]
 # after the last waypoint, there will be a default landing to z=0.05m in three seconds if --no-land is not specified, regardless of the last waypoint's z value
 
@@ -229,32 +231,21 @@ class HostPIDPWMPositionController:
         self.cf = Crazyflie(rw_cache="./cache")
         self.motor_raw = MotorRaw(crazyflie=self.cf)
 
-        self.log_state = LogConfig(name="HostPIDState", period_in_ms=60)
+        self.log_state = LogConfig(name="HostPIDState", period_in_ms=40)
         self.log_state.add_variable("stateEstimate.vx", "FP16")
         self.log_state.add_variable("stateEstimate.vy", "FP16")
         self.log_state.add_variable("stateEstimate.vz", "FP16")
-        self.log_state.add_variable("stateEstimate.ax", "FP16")
-        self.log_state.add_variable("stateEstimate.ay", "FP16")
-        self.log_state.add_variable("stateEstimate.az", "FP16")
+        self.log_state.add_variable("gyro.x", "FP16")
+        self.log_state.add_variable("gyro.y", "FP16")
+        self.log_state.add_variable("gyro.z", "FP16")
         self.log_state.add_variable("stateEstimate.x", "FP16")
         self.log_state.add_variable("stateEstimate.y", "FP16")
         self.log_state.add_variable("stateEstimate.z", "FP16")
         self.log_state.add_variable("stateEstimate.pitch", "FP16")
         self.log_state.add_variable("stateEstimate.roll", "FP16")
         self.log_state.add_variable("stateEstimate.yaw", "FP16")
-        # self.log_state.add_variable("stateEstimate.qx", "FP16")
-        # self.log_state.add_variable("stateEstimate.qy", "FP16")
-        # self.log_state.add_variable("stateEstimate.qz", "FP16")
-        # self.log_state.add_variable("stateEstimate.qw", "FP16")
+        self.log_state.add_variable("pm.vbat", "FP16")
 
-        self.log_sensor = LogConfig(name="HostPIDSensor", period_in_ms=60)
-        self.log_sensor.add_variable("gyro.x", "float")
-        self.log_sensor.add_variable("gyro.y", "float")
-        self.log_sensor.add_variable("gyro.z", "float")
-        self.log_sensor.add_variable("acc.x", "float")
-        self.log_sensor.add_variable("acc.y", "float")
-        self.log_sensor.add_variable("acc.z", "float")
-        self.log_sensor.add_variable("pm.vbat", "FP16")
         self.killed = False
         self.m1_multiplier = 1.0
         self.m2_multiplier = 1.0
@@ -290,11 +281,8 @@ class HostPIDPWMPositionController:
             try:
                 self.cf.log.add_config(self.log_state)
                 self.log_state.data_received_cb.add_callback(self._log_state_callback)
-                self.cf.log.add_config(self.log_sensor)
-                self.log_sensor.data_received_cb.add_callback(self._log_sensor_callback)
 
                 self.log_state.start()
-                self.log_sensor.start()
                 logs_started = True
 
                 scf.cf.param.set_value("motorPowerSet.enable", 1)
@@ -322,7 +310,6 @@ class HostPIDPWMPositionController:
                 self._stop_motors()
                 if logs_started:
                     self.log_state.stop()
-                    self.log_sensor.stop()
                 with open(WAYPOINT_DATA_PATH, "w", encoding="utf-8") as json_file:
                     json.dump(json_data, json_file, indent=4)
 
@@ -521,12 +508,13 @@ class HostPIDPWMPositionController:
         self.cf_state.velocity.x = data["stateEstimate.vx"]
         self.cf_state.velocity.y = data["stateEstimate.vy"]
         self.cf_state.velocity.z = data["stateEstimate.vz"]
-        self.cf_state.acc.x = data["stateEstimate.ax"]
-        self.cf_state.acc.y = data["stateEstimate.ay"]
-        self.cf_state.acc.z = data["stateEstimate.az"]
         self.cf_state.attitude.roll = data["stateEstimate.roll"]
         self.cf_state.attitude.pitch = data["stateEstimate.pitch"]
         self.cf_state.attitude.yaw = data["stateEstimate.yaw"]
+        self.cf_sensors.gyro.x = data["gyro.x"]
+        self.cf_sensors.gyro.y = data["gyro.y"]
+        self.cf_sensors.gyro.z = data["gyro.z"]
+        self.cf_vbat = data["pm.vbat"]
 
         # qx = data["stateEstimate.qx"]
         # qy = data["stateEstimate.qy"]
@@ -544,15 +532,9 @@ class HostPIDPWMPositionController:
         # self.cf_state.attitude.yaw = np.degrees(rpy.z)
 
         self._have_state = True
+        self._have_sensor = True
 
     def _log_sensor_callback(self, _timestamp, data, _logconf):
-        self.cf_sensors.gyro.x = data["gyro.x"]
-        self.cf_sensors.gyro.y = data["gyro.y"]
-        self.cf_sensors.gyro.z = data["gyro.z"]
-        self.cf_sensors.acc.x = data["acc.x"]
-        self.cf_sensors.acc.y = data["acc.y"]
-        self.cf_sensors.acc.z = data["acc.z"]
-        self.cf_vbat = data["pm.vbat"]
         self._have_sensor = True
 
 
@@ -596,7 +578,7 @@ def parse_args():
         help="Main control duration before landing",
     )
     parser.add_argument(
-        "--loop-hz", type=float, default=200.0, help="Host control loop rate"
+        "--loop-hz", type=float, default=250.0, help="Host control loop rate"
     )
     parser.add_argument(
         "--land-z", type=float, default=0.05, help="Landing target z (m)"

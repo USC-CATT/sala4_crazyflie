@@ -113,29 +113,20 @@ class PWMMotorController:
         self.control = Control()
 
         self.lg_state = LogConfig(name="State Estimator", period_in_ms=60)
-        self.lg_sensor = LogConfig(name="Sensor Values", period_in_ms=60)
-        # We use FP16 to fit more variables in a single log packet
         self.lg_state.add_variable("stateEstimate.vx", "FP16")
         self.lg_state.add_variable("stateEstimate.vy", "FP16")
         self.lg_state.add_variable("stateEstimate.vz", "FP16")
-        self.lg_state.add_variable("stateEstimate.ax", "FP16")
-        self.lg_state.add_variable("stateEstimate.ay", "FP16")
-        self.lg_state.add_variable("stateEstimate.az", "FP16")
+        self.lg_state.add_variable("gyro.x", "FP16")
+        self.lg_state.add_variable("gyro.y", "FP16")
+        self.lg_state.add_variable("gyro.z", "FP16")
         self.lg_state.add_variable("stateEstimate.x", "FP16")
         self.lg_state.add_variable("stateEstimate.y", "FP16")
         self.lg_state.add_variable("stateEstimate.z", "FP16")
-        self.lg_state.add_variable("stateEstimate.qx", "FP16")
-        self.lg_state.add_variable("stateEstimate.qy", "FP16")
-        self.lg_state.add_variable("stateEstimate.qz", "FP16")
-        self.lg_state.add_variable("stateEstimate.qw", "FP16")
+        self.lg_state.add_variable("stateEstimate.pitch", "FP16")
+        self.lg_state.add_variable("stateEstimate.roll", "FP16")
+        self.lg_state.add_variable("stateEstimate.yaw", "FP16")
+        self.lg_state.add_variable("pm.vbat", "FP16")
 
-        self.lg_sensor.add_variable("gyro.x", "float")
-        self.lg_sensor.add_variable("gyro.y", "float")
-        self.lg_sensor.add_variable("gyro.z", "float")
-        self.lg_sensor.add_variable("acc.x", "float")
-        self.lg_sensor.add_variable("acc.y", "float")
-        self.lg_sensor.add_variable("acc.z", "float")
-        self.lg_sensor.add_variable("pm.vbat", "FP16")
 
         self.cf = Crazyflie(rw_cache="./cache")
         self.motorRaw = MotorRaw(crazyflie=self.cf)
@@ -158,8 +149,6 @@ class PWMMotorController:
         with SyncCrazyflie(URI, cf=self.cf) as scf:
             self.cf.log.add_config(self.lg_state)
             self.lg_state.data_received_cb.add_callback(self.log_state_callback)
-            self.cf.log.add_config(self.lg_sensor)
-            self.lg_sensor.data_received_cb.add_callback(self.log_sensor_callback)
 
             scf.cf.param.set_value(complete_name="motorPowerSet.enable", value=1)
             self.spinup()
@@ -167,7 +156,6 @@ class PWMMotorController:
             start = time.time()
             duration = 5
             self.lg_state.start()
-            self.lg_sensor.start()
             print("Motor Control")
             emergency = False
             while time.time() < start + duration:
@@ -331,39 +319,21 @@ class PWMMotorController:
         return isCapped
 
     def log_state_callback(self, timestamp, data, logconf):
+        
         self.cf_state.position.x = data["stateEstimate.x"]
         self.cf_state.position.y = data["stateEstimate.y"]
         self.cf_state.position.z = data["stateEstimate.z"]
         self.cf_state.velocity.x = data["stateEstimate.vx"]
         self.cf_state.velocity.y = data["stateEstimate.vy"]
         self.cf_state.velocity.z = data["stateEstimate.vz"]
-        self.cf_state.acc.x = data["stateEstimate.ax"]
-        self.cf_state.acc.y = data["stateEstimate.ay"]
-        self.cf_state.acc.z = data["stateEstimate.az"]
-        qx = data["stateEstimate.qx"]
-        qy = data["stateEstimate.qy"]
-        qz = data["stateEstimate.qz"]
-        qw = data["stateEstimate.qw"]
-        self.cf_state.attitude_quaternion.x = qx
-        self.cf_state.attitude_quaternion.y = qy
-        self.cf_state.attitude_quaternion.z = qz
-        self.cf_state.attitude_quaternion.w = qw
-        roll = np.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy))
-        pitch = np.asin(2 * (qw * qy - qx * qz))
-        yaw = np.atan2(2 * (qw * qz + qy * qx), 1 - 2 * (qy * qy + qz * qz))
-        
-        self.cf_state.attitude.roll = np.degrees(roll)
-        self.cf_state.attitude.pitch = np.degrees(pitch)
-        self.cf_state.attitude.yaw = np.degrees(yaw)
-
-    def log_sensor_callback(self, timestamp, data, logconf):
+        self.cf_state.attitude.roll = data["stateEstimate.roll"]
+        self.cf_state.attitude.pitch = data["stateEstimate.pitch"]
+        self.cf_state.attitude.yaw = data["stateEstimate.yaw"]
         self.cf_sensors.gyro.x = data["gyro.x"]
         self.cf_sensors.gyro.y = data["gyro.y"]
         self.cf_sensors.gyro.z = data["gyro.z"]
-        self.cf_sensors.acc.x = data["acc.x"]
-        self.cf_sensors.acc.y = data["acc.y"]
-        self.cf_sensors.acc.z = data["acc.z"]
         self.cf_vbat = data["pm.vbat"]
+
 
     def radioLinkStatistics(self, data):
         return

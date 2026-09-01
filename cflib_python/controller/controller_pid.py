@@ -45,7 +45,6 @@ class ControllerPID:
         self.r_roll = 0.0
         self.r_pitch = 0.0
         self.r_yaw = 0.0
-        self.accelz = 0.0
 
         # Sub-controllers
         self.attitude_controller: Optional[AttitudeController] = None
@@ -202,7 +201,6 @@ class ControllerPID:
             self.r_roll = radians(sensors.gyro.x)
             self.r_pitch = -radians(sensors.gyro.y)
             self.r_yaw = radians(sensors.gyro.z)
-            self.accelz = sensors.acc.z
 
         # Set thrust
         control.thrust = self.actuator_thrust
@@ -245,7 +243,6 @@ class ControllerPID:
             "r_roll": self.r_roll,
             "r_pitch": self.r_pitch,
             "r_yaw": self.r_yaw,
-            "accelz": self.accelz,
             "actuator_thrust": self.actuator_thrust,
             "attitude_desired_roll": self.attitude_desired.roll,
             "attitude_desired_pitch": self.attitude_desired.pitch,
