@@ -13,6 +13,8 @@ import logging
 import struct
 import json
 import time
+import inspect
+import os
 
 from cflib.crtp.crtpstack import CRTPPacket, CRTPPort
 from cflib.utils.callbacks import Caller
@@ -65,9 +67,19 @@ class MotorRaw:
         # self._ros_thread = threading.Thread(target=rclpy.spin, args=(self._node,), daemon=True)
         # self._ros_thread.start()
     def __del__(self):
+        stack = inspect.stack()
+        folder_path = datetime.now().strftime("%Y/%m/%d")
+        if len(stack) > 1:
+            filepath = stack[-1].filename
+            parentfile = os.path.splitext(os.path.basename(filepath))[0]
+            log_name = os.path.join(folder_path,f"{parentfile}_motorlog.json")
+        else:
+            log_name = os.path.join(folder_path, "motorlog_test.json")
+        os.makedirs(folder_path, exist_ok=True)
         if not self.using_json_log:
-            with open("motor_raw_log.json", "w") as f:
-                json.dump(data_json, f,indent=4)
+                with open(log_name, "a") as f:
+                    json.dump(data_json, f,indent=4)
+            
 
     def _incoming(self, packet):
         """

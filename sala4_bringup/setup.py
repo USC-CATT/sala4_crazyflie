@@ -25,7 +25,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'hello_world = sala4_bringup.hello_world:main'
+            'hello_world = sala4_bringup.hello_world:main',
+            'gz_odom_logger = sala4'
         ],
     },
 )

@@ -50,6 +50,9 @@
 - copied `MotorRawNodeTest.py` over to `MotorRawNodeSineTest.py` to get a short demo of the drone taking off and landing
 - minimum value to get the drone to take off appears to be `58115` when using `motors.send_motor_raw()`.
 
+## Andrew's log 5/29/2026
+- made it so that tailscale can only ssh into this device [link](https://tailscale.com/docs/how-to/secure-ubuntu-server-with-ufw)
+
 ## Andrew's Log 7/20/2026
 - looking at how plotting works it seems that `waypoint_data.json` is created by the `waypoint_logging.py` that is using a logger from cffirmware that json file is then transformed with `plot_data.py`
 - to make a comparsion we must then create a simular `json` file to `waypoint_data.json`
@@ -74,4 +77,10 @@
 - all this work for nothing because all the versions are incompatable and stuff so no x11 forwarding but
 - run like normal first??? then do headless maybe it makes it work it just worked an I feel like i did nothing but okay
 - ROS2 Notes for getting the type a ros2 topic is `ros2 topic info /crazyflie/odom` 
-- to get the output and template for the
+- to get the output and template for the `ros2 interface show [message type]`
+- created `Gazebo_sim_logging.py` which logs the pose of the crazyflie in the simulator 
+
+## Andrew's Log 8/7/2026
+- changed `motorRaw.py` to have better logging went used and now will create folders for the logs for a better logging experience
+- `os.makedirs(folder_path, exist_ok=True)` helps create directories in a python script
+- updated `Gazebo_sim_logging.py` as well

@@ -2,7 +2,7 @@
 """
 Subsystem handling Gazebo Odometry logging to JSON (Columnar Array Format)
 """
-
+import os
 import json
 import logging
 import time
@@ -29,10 +29,8 @@ class GZOdom:
     def __init__(
         self,
         use_json_log: bool = True,
-        log_filename: str = "odom_raw_log.json",
     ):
         self.use_json_log = use_json_log
-        self.log_filename = log_filename
         
         # Columnar structure with independent value arrays
         self.data_log = {
@@ -67,12 +65,42 @@ class GZOdom:
 
     def save_log(self):
         """Explicitly saves logged odometry data to the specified JSON file."""
+        stack = inspect.stack()
+        folder_path = datetime.now().strftime("%Y/%m/%d")
+        if len(stack) > 1:
+            filepath = stack[-1].filename
+            parentfile = os.path.splitext(os.path.basename(filepath))[0]
+            log_filename = os.path.join(folder_path,f"{parentfile}_odomlog1.json")
+        else:
+            log_filename = os.path.join(folder_path, "odomlog_test1.json")
+        os.makedirs(folder_path, exist_ok=True)
+        
+        if(log_filename)
+
         if self.use_json_log:
-            with open(self.log_filename, "w") as f:
+            with open(log_filename, "a") as f:
                 json.dump(self.data_log, f, indent=4)
-            logger.info(f"Saved odometry log to {self.log_filename}")
+            logger.info(f"Saved odometry log to {log_filename}")
 
     def destroy(self):
         """Clean shutdown helper."""
         self.save_log()
         self._node.destroy_node()
+
+# --- ENTRY POINT FOR ROS 2 EXECUTION ---
+def main(args=None):
+    rclpy.init(args=args)
+    gz_odom = GZOdom()
+
+    try:
+        # Keep the node running in the background
+        rclpy.spin(gz_odom._node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Guarantees save_log() triggers when you stop the launch file (Ctrl+C)
+        gz_odom.destroy()
+        rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
