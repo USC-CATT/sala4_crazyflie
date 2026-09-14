@@ -134,29 +134,29 @@ def main():
         z2 = _smooth(augmented_data["position_z"], SMOOTHING_WINDOW)[
             (augmented_cutoff_start + start_index) : cutoff_length - pid_cutoff_start
         ]
-        x_sp = pid_data["setpoint_x"][
-            (
-                max(pid_cutoff_start, augmented_cutoff_start) + start_index
-            ) : cutoff_length
-        ]
-        y_sp = pid_data["setpoint_y"][
-            (
-                max(pid_cutoff_start, augmented_cutoff_start) + start_index
-            ) : cutoff_length
-        ]
-        z_sp = pid_data["setpoint_z"][
-            (
-                max(pid_cutoff_start, augmented_cutoff_start) + start_index
-            ) : cutoff_length
-        ]
+        # x_sp = pid_data["setpoint_x"][
+        #     (
+        #         max(pid_cutoff_start, augmented_cutoff_start) + start_index
+        #     ) : cutoff_length
+        # ]
+        # y_sp = pid_data["setpoint_y"][
+        #     (
+        #         max(pid_cutoff_start, augmented_cutoff_start) + start_index
+        #     ) : cutoff_length
+        # ]
+        # z_sp = pid_data["setpoint_z"][
+        #     (
+        #         max(pid_cutoff_start, augmented_cutoff_start) + start_index
+        #     ) : cutoff_length
+        # ]
         pass
     else:
         x = _smooth(data["position_x"], SMOOTHING_WINDOW)[start_index:cutoff_length]
         y = _smooth(data["position_y"], SMOOTHING_WINDOW)[start_index:cutoff_length]
         z = _smooth(data["position_z"], SMOOTHING_WINDOW)[start_index:cutoff_length]
-        x_sp = data["setpoint_x"][start_index:cutoff_length]
-        y_sp = data["setpoint_y"][start_index:cutoff_length]
-        z_sp = data["setpoint_z"][start_index:cutoff_length]
+        # x_sp = data["setpoint_x"][start_index:cutoff_length]
+        # y_sp = data["setpoint_y"][start_index:cutoff_length]
+        # z_sp = data["setpoint_z"][start_index:cutoff_length]
 
     fig = plt.figure(figsize=(14, 10))
 
@@ -177,7 +177,7 @@ def main():
         ax_xy.plot(x, y, label="pid" if dual_graph else "state", color="tab:blue")
         if dual_graph:
             ax_xy.plot(x2, y2, label="augmented", color="tab:red")
-        ax_xy.plot(x_sp, y_sp, label="setpoint", color="tab:orange")
+        # ax_xy.plot(x_sp, y_sp, label="setpoint", color="tab:orange")
         ax_xy.set_title("XY Trajectory")
         ax_xy.set_xlabel("X [m]")
         ax_xy.set_ylabel("Y [m]")
@@ -189,7 +189,7 @@ def main():
     ax_x.plot(cutoff_time, x, label="x pid" if dual_graph else "x", color="tab:blue")
     if dual_graph:
         ax_x.plot(cutoff_time, x2, label="x augmented", color="tab:red")
-    ax_x.plot(cutoff_time, x_sp, label="x setpoint", color="tab:orange", linestyle="--")
+    # ax_x.plot(cutoff_time, x_sp, label="x setpoint", color="tab:orange", linestyle="--")
     ax_x.set_title("X vs Time")
     ax_x.set_xlabel("Time [s]")
     ax_x.set_ylabel("X [m]")
@@ -200,7 +200,7 @@ def main():
     ax_y.plot(cutoff_time, y, label="y pid" if dual_graph else "y", color="tab:blue")
     if dual_graph:
         ax_y.plot(cutoff_time, y2, label="y augmented", color="tab:red")
-    ax_y.plot(cutoff_time, y_sp, label="y setpoint", color="tab:orange", linestyle="--")
+    # ax_y.plot(cutoff_time, y_sp, label="y setpoint", color="tab:orange", linestyle="--")
     ax_y.set_title("Y vs Time")
     ax_y.set_xlabel("Time [s]")
     ax_y.set_ylabel("Y [m]")
@@ -211,7 +211,7 @@ def main():
     ax_z.plot(cutoff_time, z, label="z pid" if dual_graph else "z", color="tab:blue")
     if dual_graph:
         ax_z.plot(cutoff_time, z2, label="z augmented", color="tab:red")
-    ax_z.plot(cutoff_time, z_sp, label="z setpoint", color="tab:orange", linestyle="--")
+    # ax_z.plot(cutoff_time, z_sp, label="z setpoint", color="tab:orange", linestyle="--")
     ax_z.set_title("Z vs Time")
     ax_z.set_xlabel("Time [s]")
     ax_z.set_ylabel("Z [m]")

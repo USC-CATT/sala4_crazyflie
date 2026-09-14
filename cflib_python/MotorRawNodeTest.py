@@ -9,9 +9,9 @@ def main():
     rclpy.init()
     motors = MotorRaw(crazyflie=None, test=True)
 
-    for i in range(50000,65535,25):
+    for i in range(5000,65535,25):
         motors.send_motor_raw(i, i, i, i)
-        time.sleep(1)
+        time.sleep(0.5)
     motors.send_motor_raw(0, 0, 0, 0)
     rclpy.shutdown()
 

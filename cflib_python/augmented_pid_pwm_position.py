@@ -228,6 +228,33 @@ class DisturbanceAugmentor1D:
         start_time: float,
         ramp_time: float,
         enabled: bool,
+    ):son_data = {
+    "time_s": [],
+    "loop_hz": 0.0,
+    "sample_period_s": 0.0,
+    "position_x": [],
+    "setpoint_x": [],
+    "position_y": [],
+    "setpoint_y": [],
+    "position_z": [],
+    "setpoint_z": [],
+    "v_aug_x": [],
+    "v_aug_y": [],
+    "v_aug_z": [],
+}
+
+
+class DisturbanceAugmentor1D:
+    """1D augmentor that estimates disturbance from velocity error only."""
+
+    def __init__(
+        self,
+        dt: float,
+        mu: float,
+        v_limit: float,
+        start_time: float,
+        ramp_time: float,
+        enabled: bool,
     ):
         self.dt = float(dt)
         self.mu = float(mu)

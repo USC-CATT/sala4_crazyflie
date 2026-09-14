@@ -89,3 +89,8 @@
 - changed `motorRaw.py` for better logging and changed `Gazebo_sim_logging.py` to have similar logging
 - have to fix `/sala4_bringup/setup.py` so that `gz_sim_logging.py` is able to be built and can be used by gazebo you will have to change the entrypoints list
 - `motorRaw.py` creates a json
+
+## Andrew's Log 9/14/2026
+- Digital Twin unlocked we have `motorRaw.py` publish to a ros node that then logs and so does the gazebo position
+- [Crazyflie brushless specs](https://www.bitcraze.io/products/crazyflie-2-1-brushless/)
+- changed max speed of each propeller in `model/model.sdf` to 26180 from 2618 trying to find 2.1 brushless motors actual max speed

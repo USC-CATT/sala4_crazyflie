@@ -32,10 +32,10 @@ class MotorRawNode(Node):
 
     def publish_motor_raw(self, m1, m2, m3, m4):
         msg = Actuators()
-        m1 = m1 / 65535.0 * 2618.0
-        m2 = m2 / 65535.0 * 2618.0
-        m3 = m3 / 65535.0 * 2618.0
-        m4 = m4 / 65535.0 * 2618.0
+        m1 = m1 / 65535.0 * 26180.0
+        m2 = m2 / 65535.0 * 26180.0
+        m3 = m3 / 65535.0 * 26180.0
+        m4 = m4 / 65535.0 * 26180.0
         print(f"Publishing motor raw: {m1}, {m2}, {m3}, {m4}")
         msg.velocity = [float(m1), float(m2), float(m3), float(m4)]
         self._motor_raw_pub.publish(msg)
