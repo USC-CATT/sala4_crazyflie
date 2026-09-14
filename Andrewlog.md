@@ -84,3 +84,8 @@
 - changed `motorRaw.py` to have better logging went used and now will create folders for the logs for a better logging experience
 - `os.makedirs(folder_path, exist_ok=True)` helps create directories in a python script
 - updated `Gazebo_sim_logging.py` as well
+
+## Andrew's Log 9/9/2026
+- changed `motorRaw.py` for better logging and changed `Gazebo_sim_logging.py` to have similar logging
+- have to fix `/sala4_bringup/setup.py` so that `gz_sim_logging.py` is able to be built and can be used by gazebo you will have to change the entrypoints list
+- `motorRaw.py` creates a json

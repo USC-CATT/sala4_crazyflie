@@ -9,9 +9,10 @@ import time
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.node import Node
+from datetime import datetime
+import inspect
 
 logger = logging.getLogger(__name__)
-
 
 class GZOdomNode(Node):
 
@@ -31,7 +32,7 @@ class GZOdom:
         use_json_log: bool = True,
     ):
         self.use_json_log = use_json_log
-        
+        self.path = "/home/catt/crazyflie/crazyflie-ros/ros2_ws/src/sala4_crazyflie/cflib_python/"
         # Columnar structure with independent value arrays
         self.data_log = {
             "time_s": [],
@@ -64,34 +65,43 @@ class GZOdom:
             
 
     def save_log(self):
-        """Explicitly saves logged odometry data to the specified JSON file."""
+
         stack = inspect.stack()
-        folder_path = datetime.now().strftime("%Y/%m/%d")
+        date_path = datetime.now().strftime("%Y/%m/%d")
+        folder_path = f"{self.path}{date_path}"
+
         if len(stack) > 1:
             filepath = stack[-1].filename
-            parentfile = os.path.splitext(os.path.basename(filepath))[0]
-            log_filename = os.path.join(folder_path,f"{parentfile}_odomlog1.json")
+            subdir = os.path.join(folder_path, "Gazebologs")
+            base_name = f"Gz_simlog"
         else:
-            log_filename = os.path.join(folder_path, "odomlog_test1.json")
-        os.makedirs(folder_path, exist_ok=True)
-        
-        if(log_filename)
+            subdir = folder_path
+            base_name = "Gz_simlog_test"
 
-        if self.use_json_log:
-            with open(log_filename, "a") as f:
-                json.dump(self.data_log, f, indent=4)
-            logger.info(f"Saved odometry log to {log_filename}")
+        # Find the next available filename: base_name1.json, base_name2.json, ...
+        counter = 1
+        while True:
+            log_name = os.path.join(subdir, f"{base_name}{counter}.json")
+            if not os.path.exists(log_name):
+                break
+            counter += 1
+        # print(f"Saving Gazebo odometry log to: {log_name}")
+
+        # Create the FULL directory tree for this specific file
+        os.makedirs(os.path.dirname(log_name), exist_ok=True)
+
+        with open(log_name, "w") as f:
+            json.dump(self.data_log, f, indent=4)
 
     def destroy(self):
         """Clean shutdown helper."""
-        self.save_log()
+        # self.save_log()
         self._node.destroy_node()
 
 # --- ENTRY POINT FOR ROS 2 EXECUTION ---
 def main(args=None):
     rclpy.init(args=args)
     gz_odom = GZOdom()
-
     try:
         # Keep the node running in the background
         rclpy.spin(gz_odom._node)

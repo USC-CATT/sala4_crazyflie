@@ -14,7 +14,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         
         (os.path.join('share', package_name, 'launch'), glob('launch/*')),
-        (os.path.join('share', package_name, 'config'), glob('config/*'))
+        (os.path.join('share', package_name, 'config'), glob('config/*')),
+        (os.path.join('share', package_name, 'modules'), glob('modules/*'))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,8 +26,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'hello_world = sala4_bringup.hello_world:main',
-            'gz_odom_logger = sala4'
+            # 'hello_world = sala4_bringup.hello_world:main',
+            'gz_odom_logger = modules.gz_odom_logger:main'
         ],
     },
 )

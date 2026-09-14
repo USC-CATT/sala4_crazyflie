@@ -26,6 +26,14 @@ def generate_launch_description():
             )
         )
     )
+    gz_odom_logger = Node(
+        package="sala4_bringup",
+        executable="gz_odom_logger",
+        name="gz_odom_logger",
+        output="screen",
+        emulate_tty=True,
+        parameters=[{"use_sim_time": True}],
+    )
     
     # rviz_config_path = os.path.join(
     #     get_package_share_directory("sala4_bringup"),
@@ -45,6 +53,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             crazyflie_simulation,
+            gz_odom_logger
             # control,
             # rviz
         ]
