@@ -95,7 +95,7 @@ class GZOdom:
 
     def destroy(self):
         """Clean shutdown helper."""
-        # self.save_log()
+        self.save_log()
         self._node.destroy_node()
 
 # --- ENTRY POINT FOR ROS 2 EXECUTION ---
@@ -110,7 +110,7 @@ def main(args=None):
     finally:
         # Guarantees save_log() triggers when you stop the launch file (Ctrl+C)
         gz_odom.destroy()
-        rclpy.shutdown()
+        # rclpy.shutdown()
 
 if __name__ == "__main__":
     main()
