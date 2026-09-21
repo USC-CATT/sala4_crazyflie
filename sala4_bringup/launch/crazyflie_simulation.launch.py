@@ -104,7 +104,7 @@ def parse_yaml(context):
 
 def generate_launch_description():
     # Setup project paths
-    pkg_project_bringup = get_package_share_directory("ros_gz_crazyflie_bringup")
+    pkg_project_bringup = get_package_share_directory("sala4_bringup")
     pkg_project_gazebo = get_package_share_directory("ros_gz_crazyflie_gazebo")
     pkg_ros_gz_sim = get_package_share_directory("ros_gz_sim")
 
