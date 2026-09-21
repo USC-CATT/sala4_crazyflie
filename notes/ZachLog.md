@@ -21,5 +21,9 @@ Installed by downloading from the website (not from the app store, gave it all
 requested permissions. Made my account using my usc email in the hopes it would 
 just work.
 
+Press connect button on tailscale app to attempt to conenct to network. Login 
+using gmail and your usc account and it should connect just fine to the usc.edu 
+netowrk.
+
 
 
