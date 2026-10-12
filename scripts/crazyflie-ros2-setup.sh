@@ -1,6 +1,6 @@
 #!/bin/bash
 mkdir ~/crazyflie
-cd crazyflie
+cd ~/crazyflie
 mkdir crazyflie-ros
 cd crazyflie-ros
 mkdir simulation_ws
