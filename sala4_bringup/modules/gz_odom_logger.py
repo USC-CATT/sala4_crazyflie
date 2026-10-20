@@ -32,7 +32,7 @@ class GZOdom:
         use_json_log: bool = True,
     ):
         self.use_json_log = use_json_log
-        self.path = "/home/catt/crazyflie/crazyflie-ros/ros2_ws/src/sala4_crazyflie/cflib_python/"
+        self.path = "~/crazyflie/crazyflie-ros/ros2_ws/src/sala4_crazyflie/cflib_python/"
         # Columnar structure with independent value arrays
         self.data_log = {
             "time_s": [],
