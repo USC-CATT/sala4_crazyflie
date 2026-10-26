@@ -120,6 +120,7 @@ from controller.controller_types import (
 )
 from controller.pid import constrain
 from controller.position_controller import PositionController
+from live_display import LiveDisplay
 from motorRaw import MotorRaw
 
 logging.basicConfig(level=logging.ERROR)
@@ -605,6 +606,7 @@ class HostAugmentedPWMPositionController:
         self.cf_vbat = 4.2
         self._have_state = False
         self._have_sensor = False
+        self.display = LiveDisplay()
 
         if USE_SCRIPT_TRAJECTORY:
             _validate_trajectory()
@@ -698,6 +700,7 @@ class HostAugmentedPWMPositionController:
             try:
                 self.cf.log.add_config(self.log_state)
                 self.log_state.data_received_cb.add_callback(self._log_state_callback)
+                self.log_state.data_received_cb.add_callback(self.display.log_callback)
                 # self.cf.log.add_config(self.log_sensor)
                 # self.log_sensor.data_received_cb.add_callback(self._log_sensor_callback)
 
@@ -734,6 +737,7 @@ class HostAugmentedPWMPositionController:
                 if logs_started:
                     self.log_state.stop()
                     # self.log_sensor.stop()
+                self.display.close()
                 with open(WAYPOINT_DATA_PATH, "w", encoding="utf-8") as json_file:
                     json.dump(json_data, json_file, indent=4)
 

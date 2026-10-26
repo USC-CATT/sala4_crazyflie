@@ -73,6 +73,7 @@ from controller.controller_types import (
     Velocity,
     quat2rpy,
 )
+from live_display import LiveDisplay
 from motorRaw import MotorRaw
 
 logging.basicConfig(level=logging.ERROR)
@@ -207,6 +208,7 @@ class HostPIDPWMPositionController:
         self.cf_vbat = 4.2
         self._have_state = False
         self._have_sensor = False
+        self.display = LiveDisplay()
 
         if USE_SCRIPT_TRAJECTORY:
             _validate_trajectory()
@@ -281,6 +283,7 @@ class HostPIDPWMPositionController:
             try:
                 self.cf.log.add_config(self.log_state)
                 self.log_state.data_received_cb.add_callback(self._log_state_callback)
+                self.log_state.data_received_cb.add_callback(self.display.log_callback)
 
                 self.log_state.start()
                 logs_started = True
@@ -310,6 +313,7 @@ class HostPIDPWMPositionController:
                 self._stop_motors()
                 if logs_started:
                     self.log_state.stop()
+                self.display.close()
                 with open(WAYPOINT_DATA_PATH, "w", encoding="utf-8") as json_file:
                     json.dump(json_data, json_file, indent=4)
 
