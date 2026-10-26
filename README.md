@@ -6,6 +6,12 @@ This repository contains two ROS2 packages: `sala4_bringup` and `sala4`, which a
 
 This Readme is structured in the steps necessary to get the Crazyflie up and running.
 
+## Submodules
+
+This repository relies on the `sala4_python` submodule, which needs to be manually updated. 
+To update, run the following command:
+`git submodule update --remote --recursive`
+
 ## Building
 
 To build the packages contained within this repository, there is a helpful build script located at `scripts/build.sh`. You must rebuild the ROS workspace after creating or renaming any python file in either the `sala4_bringup` or `sala4` packages. To build, run:
