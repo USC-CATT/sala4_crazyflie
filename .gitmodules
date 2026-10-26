@@ -1,0 +1,3 @@
+[submodule "sala4_python"]
+	path = sala4_python
+	url = https://github.com/USC-CATT/sala4_python
