@@ -5,7 +5,7 @@ Notes from session with Noah
 ## Drone identification
 In our lab, the Drone # is written on the propellers
 
-The address is on the underside of the props
+The address is on the underside of the propellers
 i.e. `E7x4 01` means the address is `E7E7E7E701` for drone #1
 
 ## LED Indications
@@ -24,11 +24,13 @@ catastrophic error, and you need to restart the drone.
 
 Place drone in center of space (use tape on ground for easy calibration. The L 
 indicates the origin, with the long end facing in the positive X-direction. The 
-fron of the drone should face positive X)
+front of the drone should face positive X)
 
-On the computer, run 
+Cflib only supports python version 3.10. On our local computer, we use `conda` to manage our python environments.
+If you have conda, run `conda activate py310` to activate python 3.10
+
+Next, to start the cfclient to configure the drone and calibrate the Lighthouses, run:
 ```
-conda activate py310
 cfclient
 ```
 
@@ -50,26 +52,13 @@ Note: lighthouses need to be at roughly the same height
 
 ## Calibration
 
-`Manage Geometry` to begin calibration. Follow the instructions on screen toi 
-get started.
+Click `Start set up` to begin calibration. Follow the instructions on screen to
+get started. `cfclient` will walk you through setting up and calibrating the lighthouse in the interactive GUI. As the process runs, it estimates the crazyflies position automatically and saves it to the drone without need for extra input.
 
-Place drone at origin, facing the x-direction (may be done already). 
-
-`Start Measurement`
-
-Note: red tape is exactly 1 meter, sop just place it at the end of the red tape 
-for the 1 meter measurement.
-
-Follow the remainder of the instructions on screen.
-
-When complete, use `Estimate Geometry` to see the coordinates of the lighthouse 
-beacons relative to the origin.
-
-Then, write to the crazyflie so it knows where it is.
 
 ## Running python scripts.
 
-See [these instructions](./cflib_python/instructions.md) to run various python 
+We have split our python scripts into a separate submodule, `sala4_python`. Instructions for running our python scripts can be found in [here](./sala4_python/INSTRUCTIONS.md) to run various python 
 scripts, including those which will make the drone fly.
 
 Note: we built in a kill function tied to the space bar, but it only works if 
@@ -84,7 +73,7 @@ To change the path the demo follows, look for the variable
 is in the form
 
 ```
-[ time, x, y, y, psi]
+[ time, x, y, z, psi]
 ```
 Where time is the time the drone should be at that waypoint, measured from the 
 start of the script (t=0 is when the script start running), (x, y, z) are the 
@@ -95,6 +84,6 @@ drone to the right.
 
 Once you have edited the waypoints as desired, save the file, and run with
 ```
-./cflib/scriptname.py
+python3 ./sala4_python/[scriptname].py
 ```
 assuming you are located in the `sala4_crazyflie` directory when starting.
