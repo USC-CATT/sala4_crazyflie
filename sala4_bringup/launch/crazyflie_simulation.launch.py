@@ -92,7 +92,7 @@ def parse_yaml(context):
     ]["deadline"]
 
     crazysim = Node(
-        package="crazyflie_sim",
+        package="crazyflie_server_py",
         executable="crazyflie_server",
         name="crazyflie_server",
         output="screen",
@@ -101,7 +101,7 @@ def parse_yaml(context):
     )
     return [crazysim]
 
-
+    
 def generate_launch_description():
     # Setup project paths
     pkg_project_bringup = get_package_share_directory("sala4_bringup")
