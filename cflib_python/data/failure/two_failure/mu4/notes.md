@@ -1,2 +1,0 @@
-AUG_MU_XY = 2.5
-AUG_MU_Z  = 2.5

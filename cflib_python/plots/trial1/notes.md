@@ -1,1 +1,0 @@
-cutting one motor to 75% operation
