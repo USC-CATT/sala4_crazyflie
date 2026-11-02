@@ -87,6 +87,10 @@ LOG_VARIABLES = [
     "gyro.y",
     "gyro.z",
     "pm.vbat",
+    "motor.m1_rpm",
+    "motor.m2_rpm",
+    "motor.m3_rpm",
+    "motor.m4_rpm",
 ]
 
 # ---- param TOC (stubs, stored in memory) ---------------------------------------
@@ -325,7 +329,12 @@ class RosBackend:
         return self._topic
 
     def get_values(self) -> Dict[str, float]:
-        return dict(self._values)
+        values = dict(self._values)
+        for index, rpm in enumerate(self._link.motor_rpm, start=1):
+            values[f"motor.m{index}_rpm"] = int(round(rpm))
+        values["motor.m1_erpm"] = values["motor.m1_rpm"]
+        values["motor.m3_erpm"] = values["motor.m3_rpm"]
+        return values
 
     def send_motors(self, m1: int, m2: int, m3: int, m4: int):
         self._link.send_motor_raw(m1, m2, m3, m4)
@@ -431,6 +440,9 @@ class RosSimDriver(CRTPDriver):
 def _ensure_registered() -> None:
     if RosSimDriver not in cflib.crtp.CLASSES:
         cflib.crtp.CLASSES.insert(0, RosSimDriver)
+    from cflib.crazyflie.log import LogConfig
+
+    LogConfig.MAX_LEN = max(LogConfig.MAX_LEN, 64)
 
 
 def register() -> None:

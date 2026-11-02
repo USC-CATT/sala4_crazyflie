@@ -196,7 +196,7 @@ def generate_launch_description():
             # OpaqueFunction(function=parse_yaml),
             gz_sim,
             bridge,
-            gz_odom_logger,
+            # gz_odom_logger,
             # control,
             # interpreter,
             # rviz,

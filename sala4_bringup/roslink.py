@@ -102,6 +102,7 @@ class RosLink:
         self.motor_map = list(motor_map)
         self.vbat = vbat
         self._imu_gyro = None  # rad/s, body frame
+        self.motor_rpm = [0.0, 0.0, 0.0, 0.0]
 
         self._owns_rclpy = not rclpy.ok()
         if self._owns_rclpy:
@@ -191,6 +192,7 @@ class RosLink:
 
     def send_motor_raw(self, m1, m2, m3, m4):
         omegas = [self._pwm_to_omega(float(m)) for m in (m1, m2, m3, m4)]
+        self.motor_rpm = [omega * 60.0 / (2.0 * math.pi) for omega in omegas]
         out = [0.0] * 4
         for i, rotor_idx in enumerate(self.motor_map):
             out[rotor_idx] = omegas[i]
