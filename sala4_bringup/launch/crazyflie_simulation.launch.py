@@ -101,7 +101,7 @@ def parse_yaml(context):
     )
     return [crazysim]
 
-    
+
 def generate_launch_description():
     # Setup project paths
     pkg_project_bringup = get_package_share_directory("sala4_bringup")
@@ -193,7 +193,7 @@ def generate_launch_description():
                 "motion_capture_yaml_file",
                 default_value=default_motion_capture_yaml_path,
             ),
-            OpaqueFunction(function=parse_yaml),
+            # OpaqueFunction(function=parse_yaml),
             gz_sim,
             bridge,
             gz_odom_logger,
