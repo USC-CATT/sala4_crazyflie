@@ -94,3 +94,7 @@
 - Digital Twin unlocked we have `motorRaw.py` publish to a ros node that then logs and so does the gazebo position
 - [Crazyflie brushless specs](https://www.bitcraze.io/products/crazyflie-2-1-brushless/)
 - changed max speed of each propeller in `model/model.sdf` to 26180 from 2618 trying to find 2.1 brushless motors actual max speed
+
+## Andrew's Log 11/4/2026
+- made the driver for augmented so have to adapt to new host and make the driver more generalized `rosdriver.py`
+- sampling rate for the driver and the controller are off and need to change the driver to either have a changeable rate make it equal to controller `rosdriver.py` and `host_pwm_position.py`

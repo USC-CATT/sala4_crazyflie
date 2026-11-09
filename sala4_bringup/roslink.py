@@ -84,6 +84,7 @@ class RosLink:
         twist_in_body: bool = True,
         motor_map: Sequence[int] = (0, 1, 2, 3),
         vbat: float = 4.2,
+        pwm_model: str = "cubic",
         node_name: str = "host_pid_link",
     ):
         """
@@ -94,15 +95,23 @@ class RosLink:
         motor_map:   motor_map[i] = index of the Gazebo rotor driven by
                      Crazyflie motor i+1. Reorder if the SDF numbers rotors
                      differently.
+        pwm_model:   how the HOST SCRIPT turns a thrust command into PWM, which
+                     this class has to undo. It must match the script:
+                     "quadratic": thrust = THRUST_MAX/SUPPLY_V^2 * v^2
+                                  (v = PWM/65535*SUPPLY_V)
+                     "cubic":     the Crazyflie voltage->thrust polynomial
         """
+        if pwm_model not in ("quadratic", "cubic","other"):
+            raise ValueError("pwm_model must be 'quadratic' or 'cubic' or 'other' ")
+        self.pwm_model = pwm_model
         self.on_state = on_state
         self.twist_in_body = twist_in_body
         self.omega_hover = float(omega_hover)
         self.hover_cmd = float(hover_cmd)
         self.motor_map = list(motor_map)
         self.vbat = vbat
+        self.last_omega = [0.0] * 4  # last commanded rad/s, Crazyflie M1..M4
         self._imu_gyro = None  # rad/s, body frame
-        self.motor_rpm = [0.0, 0.0, 0.0, 0.0]
 
         self._owns_rclpy = not rclpy.ok()
         if self._owns_rclpy:
@@ -181,7 +190,12 @@ class RosLink:
         if pwm <= 0.0:
             return 0.0
         v = min(pwm, UINT16_MAX) / UINT16_MAX * SUPPLY_V
-        thrust = V0 + v * (V1 + v * (V2 + v * V3))
+        if self.pwm_model == "quadratic":
+            thrust = THRUST_MAX / (SUPPLY_V * SUPPLY_V) * v * v
+        elif self.pwm_model == "other":
+            thrust = -0.56*v**3 + 0.43*v**2 -0.056*v
+        else:
+            thrust = V0 + v * (V1 + v * (V2 + v * V3))
         if thrust <= 0.0:
             return 0.0
         # The script's battery compensator targets thrust = cmd/65535*THRUST_MAX,
@@ -192,7 +206,7 @@ class RosLink:
 
     def send_motor_raw(self, m1, m2, m3, m4):
         omegas = [self._pwm_to_omega(float(m)) for m in (m1, m2, m3, m4)]
-        self.motor_rpm = [omega * 60.0 / (2.0 * math.pi) for omega in omegas]
+        self.last_omega = omegas
         out = [0.0] * 4
         for i, rotor_idx in enumerate(self.motor_map):
             out[rotor_idx] = omegas[i]

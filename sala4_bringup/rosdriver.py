@@ -17,6 +17,7 @@ firmware at the CRTP packet level, just enough for cflib's normal handshake:
                                 taken from a ROS 2 nav_msgs/Odometry topic
   * param TOC / read / write -> a few stub parameters (motorPowerSet.enable, ...)
   * memory subsystem         -> reports 0 memories
+  * motor.mN_rpm             -> the COMMANDED rotor speed in RPM (not measured)
   * port 0x09 (MotorRaw)     -> 4x uint16 PWM -> converted and published to
                                 the Gazebo motor-speed topic
 
@@ -36,8 +37,13 @@ URI options (query string, all optional):
       kf=          motorConstant from the SDF   (default 1.28192e-08)
       omega_hover= rotor speed that hovers the model; default sqrt(m*g/(4*kf))
       hover_cmd=   controller hover thrust command    (default 36000)
+      pwm_model=   'quadratic' (default) or 'cubic': how the script maps thrust
+                   to PWM; must match the script's compensation
       motor_map=   Gazebo rotor index for M1..M4      (default 0,1,2,3)
       wait=        seconds to wait for the first odometry (default 10)
+      state_hz=    rate at which log blocks containing stateEstimate./gyro.
+                   are streamed, even if the script asked for a slower period
+                   (default 250; 0 = honour the requested period)
 """
 
 import logging
@@ -68,30 +74,38 @@ PROTOCOL_VERSION = 10  # >= 4: TOC v2. < 11: classic param protocol.
 
 # ---- log TOC -----------------------------------------------------------------
 LOG_TYPE_FLOAT = 0x07
+LOG_TYPE_UINT16 = 0x02
 # fetch type id -> struct format (matches cflib.crazyflie.log.LogTocElement.types)
 _LOG_FMT = {1: "<B", 2: "<H", 3: "<L", 4: "<b", 5: "<h", 6: "<i", 7: "<f", 8: "<e"}
+
+_INT_RANGE = {
+    "<B": (0, 255), "<H": (0, 65535), "<L": (0, 2**32 - 1),
+    "<b": (-128, 127), "<h": (-32768, 32767), "<i": (-(2**31), 2**31 - 1),
+}
 
 # Only variables that are really populated from ROS are advertised, so a script
 # asking for anything else fails loudly instead of silently reading zeros.
 LOG_VARIABLES = [
-    "stateEstimate.x",
-    "stateEstimate.y",
-    "stateEstimate.z",
-    "stateEstimate.vx",
-    "stateEstimate.vy",
-    "stateEstimate.vz",
-    "stateEstimate.roll",
-    "stateEstimate.pitch",
-    "stateEstimate.yaw",
-    "gyro.x",
-    "gyro.y",
-    "gyro.z",
-    "pm.vbat",
-    "motor.m1_rpm",
-    "motor.m2_rpm",
-    "motor.m3_rpm",
-    "motor.m4_rpm",
+    ("stateEstimate.x", LOG_TYPE_FLOAT),
+    ("stateEstimate.y", LOG_TYPE_FLOAT),
+    ("stateEstimate.z", LOG_TYPE_FLOAT),
+    ("stateEstimate.vx", LOG_TYPE_FLOAT),
+    ("stateEstimate.vy", LOG_TYPE_FLOAT),
+    ("stateEstimate.vz", LOG_TYPE_FLOAT),
+    ("stateEstimate.roll", LOG_TYPE_FLOAT),
+    ("stateEstimate.pitch", LOG_TYPE_FLOAT),
+    ("stateEstimate.yaw", LOG_TYPE_FLOAT),
+    ("gyro.x", LOG_TYPE_FLOAT),
+    ("gyro.y", LOG_TYPE_FLOAT),
+    ("gyro.z", LOG_TYPE_FLOAT),
+    ("pm.vbat", LOG_TYPE_FLOAT),
+    # Commanded rotor speed in RPM (NOT measured: the sim does not bridge it).
+    ("motor.m1_rpm", LOG_TYPE_UINT16),
+    ("motor.m2_rpm", LOG_TYPE_UINT16),
+    ("motor.m3_rpm", LOG_TYPE_UINT16),
+    ("motor.m4_rpm", LOG_TYPE_UINT16),
 ]
+_STATE_PREFIXES = ("stateEstimate.", "gyro.")
 
 # ---- param TOC (stubs, stored in memory) ---------------------------------------
 PARAM_U8, PARAM_U16 = 0x08, 0x09
@@ -124,6 +138,7 @@ class _LogBlock:
     def __init__(self):
         self.variables = []  # list of (fetch_type, toc_id)
         self.period_s = 0.1
+        self.is_state = False
         self.running = False
         self.next_due = 0.0
 
@@ -135,7 +150,9 @@ class SimFirmware:
         self,
         get_values: Callable[[], Dict[str, float]],
         send_motors: Callable[[int, int, int, int], None],
+        state_hz: float = 250.0,
     ):
+        self.state_hz = state_hz
         self._get_values = get_values
         self._send_motors = send_motors
         self._lock = threading.RLock()
@@ -182,13 +199,15 @@ class SimFirmware:
                 return [_pk(PORT_LOG, 0, bytes([1]) + body)]
             if cmd == 2:  # CMD_GET_ITEM_V2
                 idx = data[1] | (data[2] << 8)
-                group, name = LOG_VARIABLES[idx].split(".")
-                body = bytes([LOG_TYPE_FLOAT]) + group.encode() + b"\0" + name.encode() + b"\0"
+                full, ltype = LOG_VARIABLES[idx]
+                group, name = full.split(".")
+                body = bytes([ltype]) + group.encode() + b"\0" + name.encode() + b"\0"
                 return [_pk(PORT_LOG, 0, bytes([2, data[1], data[2]]) + body)]
             if cmd == 0:  # CMD_TOC_ELEMENT (v1)
                 idx = data[1]
-                group, name = LOG_VARIABLES[idx].split(".")
-                body = bytes([LOG_TYPE_FLOAT]) + group.encode() + b"\0" + name.encode() + b"\0"
+                full, ltype = LOG_VARIABLES[idx]
+                group, name = full.split(".")
+                body = bytes([ltype]) + group.encode() + b"\0" + name.encode() + b"\0"
                 return [_pk(PORT_LOG, 0, bytes([0, idx]) + body)]
         elif ch == 1:  # block control
             if cmd in (0, 6, 1, 7):  # create / append (v1, v2)
@@ -210,6 +229,16 @@ class SimFirmware:
                 if block is None:
                     return [_pk(PORT_LOG, 1, bytes([3, block_id, 2]))]  # ENOENT
                 block.period_s = max(period, 1) * 0.01
+                block.is_state = any(
+                    LOG_VARIABLES[tid][0].startswith(_STATE_PREFIXES)
+                    for _, tid in block.variables
+                )
+                # A host control loop wants fresh state, and the radio-bandwidth
+                # reason for slow logging does not exist in simulation, so
+                # blocks holding state are streamed at state_hz if that is
+                # faster than requested (state_hz=0 -> honour the request).
+                if block.is_state and self.state_hz > 0:
+                    block.period_s = min(block.period_s, 1.0 / self.state_hz)
                 block.running = True
                 block.next_due = time.monotonic()
                 return [_pk(PORT_LOG, 1, bytes([3, block_id, 0]))]
@@ -240,7 +269,7 @@ class SimFirmware:
                 block.next_due = max(block.next_due + block.period_s, now)
                 payload = bytes([block_id]) + stamp.to_bytes(3, "little")
                 for fetch, toc_id in block.variables:
-                    payload += self._pack_log_value(fetch, LOG_VARIABLES[toc_id], values)
+                    payload += self._pack_log_value(fetch, LOG_VARIABLES[toc_id][0], values)
                 out.append(_pk(PORT_LOG, 2, payload))
         return out
 
@@ -253,7 +282,9 @@ class SimFirmware:
                 if fmt == "<e":
                     v = max(-65504.0, min(65504.0, v))
                 return struct.pack(fmt, v)
-            return struct.pack(fmt, int(round(v)))
+            iv = int(round(v))
+            lo, hi = _INT_RANGE[fmt]
+            return struct.pack(fmt, max(lo, min(hi, iv)))
         except (struct.error, OverflowError, ValueError):
             return struct.pack(fmt, 0)
 
@@ -293,7 +324,7 @@ class SimFirmware:
 
 # ---- ROS backend ------------------------------------------------------------------
 class RosBackend:
-    """State/motor plumbing through roslink.RosLink (needs rclpy)."""
+    """State/motor plumbing through ros_link.RosLink (needs rclpy)."""
 
     def __init__(self, cfg: Dict[str, str]):
         from roslink import RosLink  # lazy: rclpy only needed for ros:// links
@@ -313,6 +344,7 @@ class RosBackend:
             motor_msg_type=cfg.get("msg", "actuator_msgs/msg/Actuators"),
             imu_topic=cfg.get("imu"),
             twist_in_body=cfg.get("twist", "body") != "world",
+            pwm_model=cfg.get("pwm_model", "other"),
             motor_map=[int(i) for i in cfg.get("motor_map", "0,1,2,3").split(",")],
         )
         self._link.start()
@@ -330,10 +362,9 @@ class RosBackend:
 
     def get_values(self) -> Dict[str, float]:
         values = dict(self._values)
-        for index, rpm in enumerate(self._link.motor_rpm, start=1):
-            values[f"motor.m{index}_rpm"] = int(round(rpm))
-        values["motor.m1_erpm"] = values["motor.m1_rpm"]
-        values["motor.m3_erpm"] = values["motor.m3_rpm"]
+        # commanded rotor speed (rad/s) -> RPM, in Crazyflie motor order
+        for i, omega in enumerate(self._link.last_omega):
+            values[f"motor.m{i + 1}_rpm"] = omega * 60.0 / (2.0 * math.pi)
         return values
 
     def send_motors(self, m1: int, m2: int, m3: int, m4: int):
@@ -381,7 +412,11 @@ class RosSimDriver(CRTPDriver):
                 "Is Gazebo running and the ros_gz bridge up? (ros2 topic echo it)"
             )
 
-        self._fw = SimFirmware(self._backend.get_values, self._backend.send_motors)
+        self._fw = SimFirmware(
+            self._backend.get_values,
+            self._backend.send_motors,
+            state_hz=float(cfg.get("state_hz", 250)),
+        )
         self.in_queue = queue.Queue()
         self._stop.clear()
         self._thread = threading.Thread(target=self._run, name="RosSimDriver", daemon=True)
@@ -440,9 +475,6 @@ class RosSimDriver(CRTPDriver):
 def _ensure_registered() -> None:
     if RosSimDriver not in cflib.crtp.CLASSES:
         cflib.crtp.CLASSES.insert(0, RosSimDriver)
-    from cflib.crazyflie.log import LogConfig
-
-    LogConfig.MAX_LEN = max(LogConfig.MAX_LEN, 64)
 
 
 def register() -> None:
