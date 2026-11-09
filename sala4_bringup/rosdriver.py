@@ -344,7 +344,7 @@ class RosBackend:
             motor_msg_type=cfg.get("msg", "actuator_msgs/msg/Actuators"),
             imu_topic=cfg.get("imu"),
             twist_in_body=cfg.get("twist", "body") != "world",
-            pwm_model=cfg.get("pwm_model", "other"),
+            pwm_model=cfg.get("pwm_model", "quadratic"),
             motor_map=[int(i) for i in cfg.get("motor_map", "0,1,2,3").split(",")],
         )
         self._link.start()
